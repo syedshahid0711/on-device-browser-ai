@@ -171,67 +171,7 @@
     btn.disabled = false;
   });
 
-  /* ─────────────────────────────────────
-     PROFILE TAB
-  ───────────────────────────────────── */
-  const profileForm     = document.getElementById('profile-form');
-  const saveProfileBtn  = document.getElementById('save-profile-btn');
-  const saveStatus      = document.getElementById('save-status');
 
-  const PROFILE_FIELDS = ['name','email','phone','dob','address','employee_id','division','gender','clearance','password'];
-
-  async function loadProfile() {
-    try {
-      const result = await new Promise(res => chrome.storage.local.get(['pba_user_profile'], res));
-      const p = (result && result.pba_user_profile) || {};
-      PROFILE_FIELDS.forEach(key => {
-        const el = document.getElementById(`p-${key.replace('_','-')}`);
-        if (el && p[key] !== undefined) el.value = p[key];
-      });
-    } catch (e) {
-      const resp = await bg('GET_PROFILE');
-      if (resp && resp.profile) {
-        const p = resp.profile;
-        PROFILE_FIELDS.forEach(key => {
-          const el = document.getElementById(`p-${key.replace('_','-')}`);
-          if (el && p[key] !== undefined) el.value = p[key];
-        });
-      }
-    }
-  }
-
-  profileForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const profile = {};
-    PROFILE_FIELDS.forEach(key => {
-      const el = document.getElementById(`p-${key.replace('_','-')}`);
-      if (el) profile[key] = el.value;
-    });
-
-    saveProfileBtn.disabled = true;
-    try {
-      await new Promise((resolve, reject) => {
-        chrome.storage.local.set({ pba_user_profile: profile }, () => {
-          if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
-          else resolve();
-        });
-      });
-      saveStatus.textContent  = '✓ Saved locally';
-      saveStatus.className    = 'save-status ok';
-    } catch (err) {
-      const resp = await bg('SAVE_PROFILE', { profile });
-      if (resp && resp.ok) {
-        saveStatus.textContent  = '✓ Saved locally';
-        saveStatus.className    = 'save-status ok';
-      } else {
-        saveStatus.textContent  = '✗ Save failed';
-        saveStatus.className    = 'save-status error';
-      }
-    } finally {
-      saveProfileBtn.disabled = false;
-      setTimeout(() => { saveStatus.textContent = ''; saveStatus.className = 'save-status'; }, 3000);
-    }
-  });
 
   /* ─────────────────────────────────────
      WORD DOCUMENT IMPORT
@@ -282,29 +222,17 @@
       }
 
       const p = json.data;
-      let fieldsUpdated = 0;
 
-      // Populate form fields with extracted data
-      PROFILE_FIELDS.forEach(key => {
-        const el = document.getElementById(`p-${key.replace('_','-')}`);
-        if (el && p[key] !== undefined && p[key] !== null && p[key] !== '') {
-          // If it's a select field, try to match case-insensitively
-          if (el.tagName.toLowerCase() === 'select') {
-            for (let i = 0; i < el.options.length; i++) {
-              if (el.options[i].value === p[key] || el.options[i].value.replace('_', ' ') === p[key].replace('_', ' ')) {
-                el.selectedIndex = i;
-                fieldsUpdated++;
-                break;
-              }
-            }
-          } else {
-            el.value = p[key];
-            fieldsUpdated++;
-          }
-        }
+      // Automatically save to local storage
+      await new Promise((resolve, reject) => {
+        chrome.storage.local.set({ pba_user_profile: p }, () => {
+          if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+          else resolve();
+        });
       });
 
-      importStatus.textContent = `✓ Extracted ${fieldsUpdated} fields! Review & click Save.`;
+      const fieldsExtracted = Object.keys(p).length;
+      importStatus.textContent = `✓ Extracted and saved ${fieldsExtracted} fields!`;
       importStatus.style.color = 'var(--status-ok)';
       
       // Clear file input so they can upload again if needed
@@ -435,7 +363,6 @@
   async function init() {
     await Promise.all([
       checkBackend(),
-      loadProfile(),
       initSettings(),
       scanPage(),
     ]);

@@ -71,8 +71,8 @@ python -m http.server 5500
 ### 5. Run the Demo
 1. Open `http://localhost:5500` in Chrome
 2. Click the 🛡️ extension icon
-3. Go to **👤 Profile** tab → fill in your details manually OR click **Import from Word (.docx)** to automatically extract your resume/profile via local AI → **Save Profile Locally**
-4. Go to **🤖 Agent** tab → click **Scan Page**
+3. In the **🤖 Agent** tab, click **Import from Word (.docx)** and select your resume to automatically extract and securely save your profile via local AI.
+4. On the **🤖 Agent** tab → click **Scan Page**
 5. Type: `Fill my registration form and submit it`
 6. Click **Start Agent**
 7. Watch the form fill itself — private data never sent to server!
