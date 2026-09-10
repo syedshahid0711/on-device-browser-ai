@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISRO Member Registration — ISRO Portal</title>
+  <meta name="description" content="Official member registration form for ISRO Portal." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon" aria-hidden="true">🚀</span>
+        <span class="logo-name">ISRO Portal</span>
+      </div>
+      <nav class="header-nav" aria-label="Main navigation">
+        <a href="#">Home</a>
+        <a href="#">Admissions</a>
+        <a href="#">Courses</a>
+        <a href="#">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content" id="main-content">
+
+    <div class="hero-band">
+      <h1>ISRO Member Registration</h1>
+      <p class="hero-sub">ISRO Internal Portal &nbsp;|&nbsp; Complete all required fields</p>
+    </div>
+
+    <div class="form-container">
+
+      <!-- Progress indicator -->
+      <div class="progress-wrapper" aria-label="Form completion progress">
+        <div class="progress-track">
+          <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        </div>
+        <span class="progress-label" id="progress-label">0% complete</span>
+      </div>
+
+      <form id="registration-form" novalidate autocomplete="on">
+
+        <!-- ── Section 1: Personal Information ── -->
+        <fieldset class="form-section" id="section-personal">
+          <legend>
+            <span class="section-icon" aria-hidden="true">👤</span>
+            Personal Information
+          </legend>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="full_name">Full Name <abbr title="required" class="req">*</abbr></label>
+              <input
+                type="text"
+                id="full_name"
+                name="full_name"
+                placeholder="e.g. Shahid Khan"
+                autocomplete="name"
+                data-pii="name"
+                data-label="Full Name"
+                required
+              />
+              <span class="field-hint">As per official documents</span>
+            </div>
+
+            <div class="field-group">
+              <label for="employee_id">Employee ID <abbr title="required" class="req">*</abbr></label>
+              <input
+                type="text"
+                id="employee_id"
+                name="employee_id"
+                placeholder="e.g. EMP2024001"
+                autocomplete="off"
+                data-pii="employee_id"
+                data-label="Employee ID"
+                required
+              />
+              <span class="field-hint">Provided by HR</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="dob">Date of Birth <abbr title="required" class="req">*</abbr></label>
+              <input
+                type="date"
+                id="dob"
+                name="dob"
+                data-pii="dob"
+                data-label="Date of Birth"
+                required
+              />
+            </div>
+
+            <div class="field-group">
+              <label for="gender">Gender <abbr title="required" class="req">*</abbr></label>
+              <select
+                id="gender"
+                name="gender"
+                data-label="Gender"
+                required
+              >
+                <option value="">— Select gender —</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non_binary">Non-binary</option>
+                <option value="prefer_not">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ── Section 2: Contact Information ── -->
+        <fieldset class="form-section" id="section-contact">
+          <legend>
+            <span class="section-icon" aria-hidden="true">📬</span>
+            Contact Information
+          </legend>
+
+          <div class="field-group">
+            <label for="email">Email Address <abbr title="required" class="req">*</abbr></label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              data-pii="email"
+              data-label="Email"
+              required
+            />
+          </div>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="phone">Phone Number <abbr title="required" class="req">*</abbr></label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="+91 98765 43210"
+                autocomplete="tel"
+                data-pii="phone"
+                data-label="Phone Number"
+                required
+              />
+            </div>
+
+            <div class="field-group">
+              <label for="address">Home Address <abbr title="required" class="req">*</abbr></label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                placeholder="Street, City, State, PIN"
+                autocomplete="street-address"
+                data-pii="address"
+                data-label="Home Address"
+                required
+              />
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ── Section 3: Professional Details ── -->
+        <fieldset class="form-section" id="section-professional">
+          <legend>
+            <span class="section-icon" aria-hidden="true">💼</span>
+            Professional Details
+          </legend>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="division">Division <abbr title="required" class="req">*</abbr></label>
+              <select
+                id="division"
+                name="division"
+                data-label="Division"
+                required
+              >
+                <option value="">— Select division —</option>
+                <option value="aeronautics">Aeronautics</option>
+                <option value="propulsion">Propulsion</option>
+                <option value="spacecraft">Spacecraft</option>
+                <option value="avionics">Avionics</option>
+                <option value="mission_control">Mission Control</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="clearance_level">Clearance Level <abbr title="required" class="req">*</abbr></label>
+              <select
+                id="clearance_level"
+                name="clearance_level"
+                data-label="Clearance Level"
+                required
+              >
+                <option value="">— Select clearance —</option>
+                <option value="level_1">Level 1</option>
+                <option value="level_2">Level 2</option>
+                <option value="secret">Secret</option>
+                <option value="top_secret">Top Secret</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ── Section 4: Account Security ── -->
+        <fieldset class="form-section" id="section-security">
+          <legend>
+            <span class="section-icon" aria-hidden="true">🔐</span>
+            Account Security
+          </legend>
+
+          <div class="field-row">
+            <div class="field-group">
+              <label for="password">Password <abbr title="required" class="req">*</abbr></label>
+              <div class="input-with-action">
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  placeholder="Minimum 8 characters"
+                  autocomplete="new-password"
+                  data-pii="password"
+                  data-label="Password"
+                  required
+                />
+                <button type="button" class="eye-btn" id="toggle-password" aria-label="Toggle password visibility" onclick="togglePwd('password','toggle-password')">👁</button>
+              </div>
+              <div class="strength-bar" id="strength-bar" aria-live="polite">
+                <div class="strength-fill" id="strength-fill"></div>
+              </div>
+              <span class="field-hint" id="strength-label"></span>
+            </div>
+
+            <div class="field-group">
+              <label for="confirm_password">Confirm Password <abbr title="required" class="req">*</abbr></label>
+              <div class="input-with-action">
+                <input
+                  type="password"
+                  id="confirm_password"
+                  name="confirm_password"
+                  placeholder="Re-enter password"
+                  autocomplete="new-password"
+                  required
+                />
+                <button type="button" class="eye-btn" id="toggle-confirm" aria-label="Toggle password visibility" onclick="togglePwd('confirm_password','toggle-confirm')">👁</button>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ── Section 5: Document Upload ── -->
+        <fieldset class="form-section" id="section-docs">
+          <legend>
+            <span class="section-icon" aria-hidden="true">📎</span>
+            Document Upload
+          </legend>
+
+          <div class="field-group">
+            <label for="document">Upload ID Proof</label>
+            <div class="drop-zone" id="drop-zone">
+              <input
+                type="file"
+                id="document"
+                name="document"
+                accept=".pdf,.jpg,.jpeg,.png"
+                aria-describedby="doc-hint"
+              />
+              <div class="drop-zone-content" id="drop-zone-content">
+                <span class="drop-icon" aria-hidden="true">📄</span>
+                <p><strong>Drag &amp; drop</strong> or <span class="browse-link">browse</span></p>
+                <p id="doc-hint" class="field-hint">PDF, JPG, PNG &bull; Max 5 MB</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="checkbox-label" for="terms">
+              <input type="checkbox" id="terms" name="terms" required />
+              <span class="checkmark" aria-hidden="true"></span>
+              I agree to the <a href="#" tabindex="0">Terms of Service</a> and <a href="#" tabindex="0">Privacy Policy</a>
+            </label>
+          </div>
+        </fieldset>
+
+        <!-- ── Form Actions ── -->
+        <div class="form-actions">
+          <button type="reset" id="reset-btn" class="btn btn-ghost">
+            ↺ &nbsp; Reset
+          </button>
+          <button type="submit" id="submit-btn" class="btn btn-primary">
+            Submit Registration &nbsp; →
+          </button>
+        </div>
+
+      </form>
+
+      <!-- ── Success Overlay ── -->
+      <div class="success-overlay" id="success-overlay" hidden aria-modal="true" role="dialog" aria-label="Registration successful">
+        <div class="success-card">
+          <div class="success-icon" aria-hidden="true">✅</div>
+          <h2>Registration Successful!</h2>
+          <p>Your application has been received. A confirmation email will be sent shortly.</p>
+          <p class="reg-ref">Reference ID: <strong id="ref-id"></strong></p>
+          <button class="btn btn-primary" id="register-another-btn" onclick="resetAll()">
+            Register Another Member
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /.form-container -->
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2024 ISRO Portal &bull; All rights reserved &bull; <a href="#">Privacy Policy</a> &bull; <a href="#">Support</a></p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

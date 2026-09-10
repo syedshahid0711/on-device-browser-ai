@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables — NEVER commit these
+.env
+backend/.env
+
+# SQLite databases
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.yarn/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# Extension build artifacts (keep source, ignore packed)
+extension/*.crx
+extension/*.pem
+
+# ONNX / AI model weights (large files — track with Git LFS if needed)
+*.onnx
+*.bin
+models/
+
+# Misc
+*.bak
+*.tmp

@@ -1,0 +1,213 @@
+"""
+backend/app/services/llm_service.py
+
+Ollama integration for server-side AI reasoning.
+Sends SANITIZED page context → Ollama local LLM → structured JSON actions.
+
+Privacy guarantee: this service NEVER receives real user PII values.
+The page context arriving here already has sensitive fields redacted
+(e.g., "value": "[REDACTED_EMAIL]").
+
+Ollama API docs: https://github.com/ollama/ollama/blob/main/docs/api.md
+Default endpoint: http://localhost:11434
+"""
+
+from __future__ import annotations
+import json
+import os
+import re
+from typing import List
+
+import httpx
+from app.models.schemas import Action, AnalyzeRequest, AnalyzeResponse
+from app.utils.logger import get_logger
+
+log = get_logger("llm_service")
+
+OLLAMA_URL   = os.getenv("OLLAMA_URL",   "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
+TIMEOUT_SEC  = 120.0
+
+
+# ── System prompt ─────────────────────────────────────────────────────────────
+
+SYSTEM_PROMPT = """You are an AI browser agent assistant. Your job is to analyze a webpage's structure and produce a precise, safe, structured list of browser actions to complete a user's task.
+
+CRITICAL RULES:
+1. You receive a SANITIZED page description — sensitive fields have values like "[REDACTED_EMAIL]", "[REDACTED_NAME]", etc.
+2. You MUST use "value_source": "local_profile" and "profile_key" for ANY field that can be mapped to the profile (including select dropdowns like gender, division, clearance). NEVER try to guess or invent real values.
+3. For non-profile select fields, specify a static "value" matching the exact option label.
+4. Only use these action types: fill, click, select, check, uncheck, scroll, navigate.
+5. Always match "target_id" to the exact field "id" from the page context.
+6. If there is a terms and conditions or agreement checkbox, ALWAYS output a 'check' action for it.
+7. If there is a confirm password field, output a 'fill' action for it using the "password" profile_key.
+8. Ignore file upload fields as they cannot be automated safely.
+9. For fields like "Clearance Level", "Clearance", etc. YOU MUST ALWAYS use "value_source": "local_profile" and "profile_key": "clearance".
+10. Return ONLY valid JSON — no markdown, no explanation outside the JSON.
+
+PROFILE KEYS available for fill and select actions:
+  name, email, phone, dob, address, employee_id, division, gender, clearance, password
+
+RESPONSE FORMAT (strict JSON only):
+{
+  "reasoning": "Brief explanation of what you detected and why these actions",
+  "confidence": 0.95,
+  "actions": [
+    {"action": "fill",   "target_id": "full_name",  "value_source": "local_profile", "profile_key": "name"},
+    {"action": "fill",   "target_id": "confirm_password", "value_source": "local_profile", "profile_key": "password"},
+    {"action": "select", "target_id": "division",   "value_source": "local_profile", "profile_key": "division"},
+    {"action": "select", "target_id": "clearance_level", "value_source": "local_profile", "profile_key": "clearance"},
+    {"action": "check",  "target_id": "terms"},
+    {"action": "click",  "target_id": "submit_btn"}
+  ]
+}"""
+
+
+# ── Build the user prompt ─────────────────────────────────────────────────────
+
+def build_prompt(req: AnalyzeRequest) -> str:
+    ctx = req.page_context
+
+    # Build a clean field summary (no real PII — already sanitized by extension)
+    field_lines = []
+    for f in ctx.fields:
+        line = f"  - id={f.id!r}, label={f.label!r}, type={f.type!r}, sensitive={f.sensitive}"
+        if f.required:
+            line += ", required=true"
+        if f.options:
+            opts = [o.get("label", o.get("value", "")) for o in f.options[:8]]
+            line += f", options={opts}"
+        if f.value and not f.sensitive:
+            line += f", current_value={f.value!r}"
+        field_lines.append(line)
+
+    fields_str = "\n".join(field_lines)
+
+    return f"""USER TASK: {req.task}
+
+PAGE INFORMATION:
+  URL: {ctx.url}
+  Title: {ctx.title}
+  Type: {ctx.page_type}
+  Total fields: {ctx.summary.get("total", "?")}
+  Sensitive fields: {ctx.summary.get("sensitive", "?")} (values redacted for privacy)
+
+FORM FIELDS:
+{fields_str}
+
+Produce the JSON action plan to complete the user's task. Remember:
+- For ALL fields that correspond to the available PROFILE KEYS (even non-sensitive select/dropdown fields like division or clearance), you MUST use "value_source": "local_profile" and the appropriate "profile_key". DO NOT specify a static "value" for them.
+- ONLY for select/dropdown fields that DO NOT correspond to a profile key, use a static "value" matching the exact option label.
+- End with a click action on the submit button if the task requires form submission.
+"""
+
+
+# ── Parse LLM response ────────────────────────────────────────────────────────
+
+def extract_json(raw: str) -> dict:
+    """
+    Extract JSON from LLM output that may contain markdown code fences
+    or extra text before/after the JSON object.
+    """
+    # Strip markdown code fences
+    raw = re.sub(r"```(?:json)?", "", raw).strip()
+
+    # Try direct parse
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # Try finding the first {...} block
+    match = re.search(r"\{[\s\S]+\}", raw)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError(f"Could not extract JSON from LLM response:\n{raw[:500]}")
+
+
+def parse_actions(data: dict) -> List[Action]:
+    actions = []
+    for raw in data.get("actions", []):
+        try:
+            # Fix LLM profile_key hallucinations at the source
+            if raw.get("profile_key") == "clearance_level":
+                raw["profile_key"] = "clearance"
+            if raw.get("profile_key") == "full_name":
+                raw["profile_key"] = "name"
+                
+            action = Action(**raw)
+            actions.append(action)
+        except Exception as e:
+            log.warning("Skipped malformed action %s: %s", raw, e)
+    return actions
+
+
+# ── Ollama health check ───────────────────────────────────────────────────────
+
+async def check_ollama() -> bool:
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{OLLAMA_URL}/api/tags")
+            return resp.status_code == 200
+    except Exception:
+        return False
+
+
+# ── Main inference call ───────────────────────────────────────────────────────
+
+async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
+    """
+    Send a sanitized analyze request to Ollama and return structured actions.
+    """
+    prompt = build_prompt(req)
+    log.info("Calling Ollama model=%s for task: %r", OLLAMA_MODEL, req.task[:80])
+    log.debug("Prompt:\n%s", prompt)
+
+    payload = {
+        "model":  OLLAMA_MODEL,
+        "stream": False,
+        "messages": [
+            {"role": "system",  "content": SYSTEM_PROMPT},
+            {"role": "user",    "content": prompt},
+        ],
+        "options": {
+            "temperature": 0.1,    # low temp for deterministic structured output
+            "num_predict": 1024,
+            "num_ctx": 2048,
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT_SEC) as client:
+            resp = await client.post(f"{OLLAMA_URL}/api/chat", json=payload)
+            resp.raise_for_status()
+    except httpx.ConnectError:
+        raise RuntimeError(
+            f"Cannot connect to Ollama at {OLLAMA_URL}. "
+            "Please start Ollama: run `ollama serve` in a terminal."
+        )
+    except httpx.TimeoutException:
+        raise RuntimeError(f"Ollama request timed out after {TIMEOUT_SEC}s")
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"Ollama HTTP error: {e.response.status_code} — {e.response.text[:200]}")
+
+    raw_content = resp.json()["message"]["content"]
+    log.debug("Raw LLM output:\n%s", raw_content)
+
+    try:
+        data    = extract_json(raw_content)
+        actions = parse_actions(data)
+    except Exception as e:
+        log.error("Failed to parse LLM output: %s\nRaw: %s", e, raw_content[:300])
+        raise RuntimeError(f"LLM returned invalid JSON: {e}")
+
+    return AnalyzeResponse(
+        actions    = actions,
+        reasoning  = data.get("reasoning", ""),
+        confidence = float(data.get("confidence", 1.0)),
+        model_used = OLLAMA_MODEL,
+    )

@@ -1,0 +1,200 @@
+/**
+ * extension/content/content.css
+ * Styles injected into every webpage by the content script.
+ * Scoped under #pba-* to avoid conflicts.
+ */
+
+/* ── Confirmation Dialog Overlay ── */
+#pba-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  z-index: 2147483647; /* max z-index */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', system-ui, sans-serif;
+  animation: pba-fade-in 0.25s ease;
+}
+
+@keyframes pba-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pba-dialog {
+  background: #1a1d2e;
+  border: 1px solid #2d3150;
+  border-radius: 16px;
+  width: 480px;
+  max-width: 92vw;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  animation: pba-slide-up 0.25s ease;
+}
+
+@keyframes pba-slide-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.pba-dialog-header {
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid #2d3150;
+  text-align: center;
+}
+
+.pba-dialog-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.pba-dialog-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 6px;
+}
+
+.pba-dialog-header p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ── Field rows ── */
+.pba-dialog-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.pba-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background: #222538;
+  border: 1px solid #2d3150;
+  transition: border-color 0.15s;
+}
+.pba-row:hover { border-color: #6366f1; }
+
+.pba-row-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pba-row-val {
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pba-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.pba-badge-private {
+  background: rgba(239,68,68,0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239,68,68,0.25);
+}
+
+.pba-badge-ok {
+  background: rgba(34,197,94,0.12);
+  color: #86efac;
+  border: 1px solid rgba(34,197,94,0.25);
+}
+
+/* ── Privacy note ── */
+.pba-privacy-note {
+  background: rgba(99,102,241,0.08);
+  border-top: 1px solid rgba(99,102,241,0.2);
+  padding: 10px 20px;
+  font-size: 0.75rem;
+  color: #a5b4fc;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ── Actions ── */
+.pba-dialog-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #2d3150;
+  justify-content: flex-end;
+}
+
+.pba-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.pba-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+.pba-btn-primary:hover {
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  transform: translateY(-1px);
+}
+
+.pba-btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: 1.5px solid #2d3150;
+}
+.pba-btn-ghost:hover {
+  color: #e2e8f0;
+  border-color: #6366f1;
+}
+
+/* ── Agent fill highlight (applied to form fields) ── */
+.agent-filled {
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15) !important;
+  animation: pba-fill-glow 0.6s ease !important;
+}
+
+@keyframes pba-fill-glow {
+  0%   { background-color: rgba(34,211,238,0.15); }
+  100% { background-color: inherit; }
+}
+
+.pba-empty {
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 20px;
+}
