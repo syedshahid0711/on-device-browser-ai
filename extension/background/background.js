@@ -65,8 +65,10 @@ async function checkBackend() {
 
 // ── Get the active tab ───────────────────────────────────────
 async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tabs && tabs.length > 0) return tabs[0];
+  const fallback = await chrome.tabs.query({ active: true });
+  return fallback && fallback.length > 0 ? fallback[0] : null;
 }
 
 async function ensureContentScript(tabId) {
@@ -273,6 +275,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
     case 'SCAN_PAGE': {
       getActiveTab().then(tab => {
+        if (!tab || !tab.id) {
+          sendResponse({ ok: false, error: 'No active tab found' });
+          return;
+        }
         sendToContent(tab.id, { type: 'SCAN_PAGE' }).then(sendResponse);
       });
       return true;
@@ -288,10 +294,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // Use a port-based approach so popup gets streaming updates
       // For simplicity here, we return immediately and send updates via chrome.runtime.sendMessage
       getActiveTab().then(tab => {
+        if (!tab || !tab.id) {
+          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'No active tab found. Please click on the webpage.' }).catch(() => {});
+          return;
+        }
         runAgentTask(task.trim(), tab.id, (update) => {
           // Broadcast update to any listening popup
           chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', ...update }).catch(() => {});
         });
+      }).catch(err => {
+        chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'Tab error: ' + err.message }).catch(() => {});
       });
 
       sendResponse({ ok: true, message: 'Task started' });

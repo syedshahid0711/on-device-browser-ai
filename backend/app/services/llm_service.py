@@ -40,7 +40,7 @@ CRITICAL RULES:
 4. Only use these action types: fill, click, select, check, uncheck, scroll, navigate.
 5. Always match "target_id" to the exact field "id" from the page context.
 6. If there is a terms and conditions or agreement checkbox, ALWAYS output a 'check' action for it.
-7. If there is a confirm password field, output a 'fill' action for it using the "password" profile_key.
+7. If there are password and/or confirm password fields, output a 'fill' action for BOTH of them using the "password" profile_key.
 8. Ignore file upload fields as they cannot be automated safely.
 9. For fields like "Clearance Level", "Clearance", etc. YOU MUST ALWAYS use "value_source": "local_profile" and "profile_key": "clearance".
 10. Return ONLY valid JSON — no markdown, no explanation outside the JSON.
@@ -54,6 +54,7 @@ RESPONSE FORMAT (strict JSON only):
   "confidence": 0.95,
   "actions": [
     {"action": "fill",   "target_id": "full_name",  "value_source": "local_profile", "profile_key": "name"},
+    {"action": "fill",   "target_id": "password", "value_source": "local_profile", "profile_key": "password"},
     {"action": "fill",   "target_id": "confirm_password", "value_source": "local_profile", "profile_key": "password"},
     {"action": "select", "target_id": "division",   "value_source": "local_profile", "profile_key": "division"},
     {"action": "select", "target_id": "clearance_level", "value_source": "local_profile", "profile_key": "clearance"},
@@ -214,22 +215,26 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
 
 # ── Profile Extraction ────────────────────────────────────────────────────────
 
-EXTRACT_SYSTEM_PROMPT = """You are an AI data extractor. Your job is to extract a user's profile information from the provided raw text (like a resume or personal document) and output it as a strict JSON object.
+EXTRACT_SYSTEM_PROMPT = """You are an advanced AI data extraction engine with expertise in unstructured documents. Your task is to perform deep information extraction from the provided raw text (which may be a resume, ID document, table, or unstructured personal file).
 
-Extract as many of these fields as you can find:
-- "name" (Full name)
-- "email"
-- "phone"
-- "dob" (Date of birth in YYYY-MM-DD format if possible)
-- "address" (Full address)
-- "employee_id"
-- "division" (e.g. aeronautics, propulsion, spacecraft, avionics, mission_control)
-- "gender" (male, female, non_binary, prefer_not)
-- "clearance" (level_1, level_2, secret, top_secret)
+Extract EVERY matching field you can find into a strict JSON object. Be highly intelligent about contextual clues, synonyms, tabular formats, and variations in wording.
 
-If a field is not found in the text, omit it from the JSON.
-Do not extract passwords.
-Return ONLY valid JSON. No markdown, no extra text.
+Fields to extract:
+- "name": Full name of the person.
+- "email": Email address.
+- "phone": Phone or mobile number.
+- "dob": Date of birth (format as YYYY-MM-DD if possible).
+- "address": Full physical or residential address.
+- "employee_id": Employee ID, student ID, or staff number.
+- "division": Department or division (e.g., aeronautics, propulsion, spacecraft, avionics, mission_control).
+- "gender": male, female, non_binary, or prefer_not.
+- "clearance": Security clearance level (e.g., level_1, level_2, secret, top_secret).
+- "password": If present, extract the exact password, passcode, PIN, or secret key. Look for keywords like "Password:", "Pass:", "Pwd:", "PIN:", "Secret:", "Login Key:", or similar followed by a value. Include symbols or numbers exactly as written.
+
+CRITICAL RULES:
+1. If a field is not found (including password), simply omit it from the JSON. Do not use null or empty strings.
+2. For "password", it might be isolated in a table row or paragraph. Always extract the literal string exactly as it appears. Ensure you check thoroughly.
+3. ABSOLUTELY NO CONVERSATIONAL TEXT. Return ONLY a valid JSON object. Do not apologize or explain if fields are missing.
 """
 
 async def extract_profile_from_text(text: str) -> dict:
@@ -237,12 +242,15 @@ async def extract_profile_from_text(text: str) -> dict:
     Send raw text to Ollama to extract profile fields into JSON.
     """
     log.info("Extracting profile from text using model=%s", OLLAMA_MODEL)
+    
+    advanced_user_prompt = f"Extract profile data into strict JSON format from this text:\n\n[DOCUMENT START]\n{text}\n[DOCUMENT END]"
+    
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
         "messages": [
             {"role": "system", "content": EXTRACT_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Extract profile data from this text:\\n\\n{text}"},
+            {"role": "user", "content": advanced_user_prompt},
         ],
         "options": {
             "temperature": 0.1,

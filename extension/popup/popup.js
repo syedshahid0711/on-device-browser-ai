@@ -11,6 +11,25 @@
   'use strict';
 
   /* ─────────────────────────────────────
+     VIEW NAVIGATION (Dashboard vs Console)
+  ───────────────────────────────────── */
+  const btnOpenConsole = document.getElementById('btn-open-console');
+  const btnBackDash = document.getElementById('btn-back-dash');
+  const viewDashboard = document.getElementById('view-dashboard');
+  const viewConsole = document.getElementById('view-console');
+
+  if (btnOpenConsole && btnBackDash) {
+    btnOpenConsole.addEventListener('click', () => {
+      viewDashboard.classList.remove('active');
+      viewConsole.classList.add('active');
+    });
+    btnBackDash.addEventListener('click', () => {
+      viewConsole.classList.remove('active');
+      viewDashboard.classList.add('active');
+    });
+  }
+
+  /* ─────────────────────────────────────
      TAB NAVIGATION
   ───────────────────────────────────── */
   const tabBtns   = document.querySelectorAll('.tab-btn');
@@ -29,12 +48,28 @@
   ───────────────────────────────────── */
   const backendDot    = document.getElementById('backend-dot');
   const backendStatus = document.getElementById('backend-status');
+  const dashBackendDot  = document.getElementById('dash-backend-dot');
+  const dashBackendText = document.getElementById('dash-backend-text');
 
   function updateBackendUI(connected) {
-    backendDot.className = 'backend-dot ' + (connected ? 'connected' : 'disconnected');
-    backendStatus.textContent = connected ? 'Online ✓' : 'Offline ✗';
-    backendStatus.className   = 'status-value ' + (connected ? 'status-ok' : 'status-warn');
-    document.getElementById('run-btn').disabled = !connected || !getTaskInput().trim();
+    if (backendDot) {
+      backendDot.className = 'backend-dot ' + (connected ? 'connected' : 'disconnected');
+    }
+    if (backendStatus) {
+      backendStatus.textContent = connected ? 'Online ✓' : 'Offline ✗';
+      backendStatus.className   = 'status-value ' + (connected ? 'status-ok' : 'status-warn');
+    }
+    const runBtn = document.getElementById('run-btn');
+    if (runBtn) {
+      runBtn.disabled = !connected || !getTaskInput().trim();
+    }
+    
+    // Update Dashboard UI
+    if (dashBackendDot && dashBackendText) {
+      dashBackendDot.className = 'status-dot ' + (connected ? 'connected' : 'disconnected');
+      dashBackendText.textContent = connected ? 'ONLINE' : 'OFFLINE';
+      dashBackendText.className = 'status-text ' + (connected ? 'connected' : 'disconnected');
+    }
   }
 
   async function checkBackend() {
@@ -84,7 +119,8 @@
   function getTaskInput() { return taskInput.value.trim(); }
 
   taskInput.addEventListener('input', () => {
-    runBtn.disabled = !getTaskInput() || backendDot.classList.contains('disconnected');
+    const isDisconnected = backendDot ? backendDot.classList.contains('disconnected') : (!backendStatus || backendStatus.textContent.includes('Offline'));
+    runBtn.disabled = !getTaskInput() || isDisconnected;
   });
 
   runBtn.addEventListener('click', async () => {
@@ -145,6 +181,9 @@
         document.getElementById('m-exec').textContent    = msg.metrics.executeMs + ' ms';
         document.getElementById('m-total').textContent   = msg.metrics.totalMs   + ' ms';
         metricsSec.style.display = 'block';
+        
+        const dashMExec = document.getElementById('dash-m-exec');
+        if (dashMExec) dashMExec.textContent = msg.metrics.executeMs;
       }
     }
 
@@ -258,9 +297,14 @@
   const scoreNum     = document.getElementById('score-num');
   const scoreTitle   = document.getElementById('score-title');
   const scoreSub     = document.getElementById('score-sub');
+  const dashPii      = document.getElementById('dash-pii');
 
   function updateDashboard(summary, ctx) {
     if (!summary) return;
+    
+    if (dashPii) {
+      dashPii.textContent = summary.sensitive < 10 ? '0' + summary.sensitive : summary.sensitive;
+    }
 
     // Score
     const pct = summary.total > 0

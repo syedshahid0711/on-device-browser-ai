@@ -7,7 +7,7 @@
   <meta name="description" content="Official member registration form for ISRO Portal." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
 
@@ -15,13 +15,21 @@
   <header class="site-header" role="banner">
     <div class="header-inner">
       <div class="logo">
-        <span class="logo-icon" aria-hidden="true">🚀</span>
-        <span class="logo-name">ISRO Portal</span>
+        <span class="logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="var(--clr-primary)">
+            <path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13.5H5.5L12 6.5z"/>
+            <circle cx="12" cy="16" r="2" fill="var(--clr-accent)"/>
+          </svg>
+        </span>
+        <div class="logo-text">
+          <span class="logo-name">ISRO</span>
+          <span class="logo-subname">Indian Space Research Organisation</span>
+        </div>
       </div>
       <nav class="header-nav" aria-label="Main navigation">
         <a href="#">Home</a>
-        <a href="#">Admissions</a>
-        <a href="#">Courses</a>
+        <a href="#">About Us</a>
+        <a href="#">Careers</a>
         <a href="#">Contact</a>
       </nav>
     </div>
@@ -31,8 +39,8 @@
   <main class="main-content" id="main-content">
 
     <div class="hero-band">
-      <h1>ISRO Member Registration</h1>
-      <p class="hero-sub">ISRO Internal Portal &nbsp;|&nbsp; Complete all required fields</p>
+      <h1>Member Registration</h1>
+      <p class="hero-sub">Department of Space, Government of India</p>
     </div>
 
     <div class="form-container">
@@ -48,7 +56,7 @@
       <form id="registration-form" novalidate autocomplete="on">
 
         <!-- ── Section 1: Personal Information ── -->
-        <fieldset class="form-section" id="section-personal">
+        <fieldset class="form-section reveal" id="section-personal">
           <legend>
             <span class="section-icon" aria-hidden="true">👤</span>
             Personal Information
@@ -118,7 +126,7 @@
         </fieldset>
 
         <!-- ── Section 2: Contact Information ── -->
-        <fieldset class="form-section" id="section-contact">
+        <fieldset class="form-section reveal" id="section-contact">
           <legend>
             <span class="section-icon" aria-hidden="true">📬</span>
             Contact Information
@@ -170,7 +178,7 @@
         </fieldset>
 
         <!-- ── Section 3: Professional Details ── -->
-        <fieldset class="form-section" id="section-professional">
+        <fieldset class="form-section reveal" id="section-professional">
           <legend>
             <span class="section-icon" aria-hidden="true">💼</span>
             Professional Details
@@ -213,7 +221,7 @@
         </fieldset>
 
         <!-- ── Section 4: Account Security ── -->
-        <fieldset class="form-section" id="section-security">
+        <fieldset class="form-section reveal" id="section-security">
           <legend>
             <span class="section-icon" aria-hidden="true">🔐</span>
             Account Security
@@ -259,7 +267,7 @@
         </fieldset>
 
         <!-- ── Section 5: Document Upload ── -->
-        <fieldset class="form-section" id="section-docs">
+        <fieldset class="form-section reveal" id="section-docs">
           <legend>
             <span class="section-icon" aria-hidden="true">📎</span>
             Document Upload
@@ -293,7 +301,7 @@
         </fieldset>
 
         <!-- ── Form Actions ── -->
-        <div class="form-actions">
+        <div class="form-actions reveal">
           <button type="reset" id="reset-btn" class="btn btn-ghost">
             ↺ &nbsp; Reset
           </button>
@@ -324,6 +332,6 @@
     <p>© 2024 ISRO Portal &bull; All rights reserved &bull; <a href="#">Privacy Policy</a> &bull; <a href="#">Support</a></p>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=2"></script>
 </body>
 </html>

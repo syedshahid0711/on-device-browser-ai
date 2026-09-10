@@ -5,260 +5,250 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Browser Agent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
 
-  <!-- ── Header ── -->
-  <header class="popup-header" id="popup-header">
-    <div class="header-logo">
-      <span class="header-icon" aria-hidden="true">🛡️</span>
-      <span class="header-title">Privacy Agent</span>
+  <!-- ===============================
+       DASHBOARD VIEW (Default)
+       =============================== -->
+  <div id="view-dashboard" class="view active">
+    
+    <!-- Top Header -->
+    <header class="dash-header">
+      <div class="dash-logo">
+        <div class="logo-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="logo-svg">
+            <circle cx="12" cy="12" r="11" stroke="rgba(255,255,255,0.4)"/>
+            <path d="M12 4L14 10L20 12L14 14L12 20L10 14L4 12L10 10L12 4Z" fill="white" stroke="none"/>
+            <path d="M4 12Q12 4 20 12" stroke="rgba(255,255,255,0.3)"/>
+            <path d="M4 12Q12 20 20 12" stroke="rgba(255,255,255,0.3)"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <div class="logo-title">PRIVACY VISION</div>
+          <div class="logo-sub">ON-DEVICE INTELLIGENCE</div>
+        </div>
+      </div>
+      <div class="dash-status">
+        <span class="status-dot" id="dash-backend-dot"></span>
+        <span class="status-text" id="dash-backend-text">ONLINE</span>
+      </div>
+    </header>
+    
+    <div class="header-line">
+      <div class="line-orange"></div>
+      <div class="line-green"></div>
     </div>
-    <div class="header-badges">
-      <span class="badge badge-version">v1.0</span>
-      <span class="backend-dot" id="backend-dot" title="Backend status"></span>
-    </div>
-  </header>
 
-  <!-- ── Tab Navigation ── -->
-  <nav class="tab-nav" role="tablist" aria-label="Agent sections">
-    <button class="tab-btn active" id="tab-agent"     role="tab" aria-selected="true"  data-tab="agent">
-      🤖 Agent
-    </button>
-
-    <button class="tab-btn"        id="tab-dashboard" role="tab" aria-selected="false" data-tab="dashboard">
-      🛡️ Privacy
-    </button>
-    <button class="tab-btn"        id="tab-settings"  role="tab" aria-selected="false" data-tab="settings">
-      ⚙️ Settings
-    </button>
-  </nav>
-
-  <!-- ═══════════════════════════════════════════
-       TAB 1: AGENT
-  ═══════════════════════════════════════════ -->
-  <section class="tab-panel active" id="panel-agent" role="tabpanel" aria-labelledby="tab-agent">
-
-    <!-- Status cards -->
-    <div class="status-grid">
-      <div class="status-card" id="card-page">
-        <span class="status-label">Page</span>
-        <span class="status-value" id="page-title">—</span>
-      </div>
-      <div class="status-card" id="card-pii">
-        <span class="status-label">PII Detected</span>
-        <span class="status-value status-sensitive" id="pii-count">—</span>
-      </div>
-      <div class="status-card" id="card-protected">
-        <span class="status-label">Protected</span>
-        <span class="status-value status-safe" id="pii-protected">—</span>
-      </div>
-      <div class="status-card" id="card-backend">
-        <span class="status-label">AI Server</span>
-        <span class="status-value" id="backend-status">Checking…</span>
+    <!-- Rings Graphic -->
+    <div class="rings-wrapper">
+      <div class="ring ring-4">
+        <div class="ring ring-3">
+          <div class="ring ring-2">
+            <div class="ring ring-1">
+              <div class="center-circle">
+                <svg viewBox="0 0 24 24" class="check-icon"><path d="M19 7L10 16l-4-4" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Quick scan button -->
-    <button class="btn btn-outline btn-sm w-full" id="scan-btn" style="margin-bottom: 1rem;">
-      🔍 Scan Page
+    <!-- Mission Status -->
+    <div class="mission-status">
+      <div class="ms-label">MISSION STATUS</div>
+      <div class="ms-title">PROTECTED</div>
+      <div class="ms-desc">Your visual context is being processed locally.</div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-card">
+      <div class="m-box">
+        <div class="m-label">LOCAL INFERENCE</div>
+        <div class="m-val"><span id="dash-m-exec">--</span><span class="m-unit">ms</span></div>
+      </div>
+      <div class="m-divider"></div>
+      <div class="m-box">
+        <div class="m-label">PII DETECTED</div>
+        <div class="m-val" id="dash-pii">00</div>
+      </div>
+      <div class="m-divider"></div>
+      <div class="m-box">
+        <div class="m-label">DATA SHARED</div>
+        <div class="m-val">0</div>
+      </div>
+    </div>
+
+    <!-- Target Info -->
+    <div class="target-card">
+      <div class="t-header">
+        <div class="t-title-area">
+          <div class="t-label">CURRENT TARGET</div>
+          <div class="t-name">Browser Environment</div>
+        </div>
+        <div class="t-badge">LIVE</div>
+      </div>
+      <div class="t-list">
+        <div class="t-item">
+          <div class="t-icon">✓</div>
+          <div class="t-text">Visual context captured</div>
+          <div class="t-status status-ready">READY</div>
+        </div>
+        <div class="t-item">
+          <div class="t-icon">✓</div>
+          <div class="t-text">Privacy scan complete</div>
+          <div class="t-status status-safe">SAFE</div>
+        </div>
+        <div class="t-item">
+          <div class="t-icon">✓</div>
+          <div class="t-text">Server payload sanitized</div>
+          <div class="t-status status-secure">SECURE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shield Box -->
+    <div class="shield-card">
+      <div class="shield-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="shield-info">
+        <div class="s-label">PRIVACY SHIELD</div>
+        <div class="s-title">ACTIVE</div>
+        <div class="s-desc">Sensitive information remains on-device.</div>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <button id="btn-open-console" class="dash-btn">
+      OPEN MISSION CONSOLE <span class="arrow">→</span>
     </button>
 
-    <!-- Word Document Import -->
-    <div class="import-section" style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);">
-      <label class="input-label" for="p-import-file">Import from Word (.docx)</label>
-      <input type="file" id="p-import-file" accept=".docx" style="display: block; margin-bottom: 0.5rem; width: 100%; font-size: 0.85rem;" />
-      <button type="button" class="btn btn-outline btn-sm w-full" id="import-word-btn">
-        📄 Extract Profile
+    <div class="dash-footer">
+      PRIVACY VISION AI &nbsp;&bull;&nbsp; v1.0.0
+    </div>
+  </div>
+
+
+  <!-- ===============================
+       CONSOLE VIEW (Interactive)
+       =============================== -->
+  <div id="view-console" class="view">
+    
+    <div class="console-top">
+      <button id="btn-back-dash" class="back-btn">← Back to Dashboard</button>
+      <div class="console-title">Mission Console</div>
+    </div>
+    
+    <!-- ── Tab Navigation ── -->
+    <nav class="tab-nav" role="tablist" aria-label="Agent sections">
+      <button class="tab-btn active" id="tab-agent"     role="tab" aria-selected="true"  data-tab="agent">🤖 Agent</button>
+      <button class="tab-btn"        id="tab-dashboard" role="tab" aria-selected="false" data-tab="dashboard">🛡️ Privacy</button>
+      <button class="tab-btn"        id="tab-settings"  role="tab" aria-selected="false" data-tab="settings">⚙️ Settings</button>
+    </nav>
+
+    <!-- TAB 1: AGENT -->
+    <section class="tab-panel active" id="panel-agent" role="tabpanel" aria-labelledby="tab-agent">
+      
+      <!-- Status cards -->
+      <div class="status-grid">
+        <div class="status-card" id="card-page">
+          <span class="status-label">Page</span>
+          <span class="status-value" id="page-title">—</span>
+        </div>
+        <div class="status-card" id="card-pii">
+          <span class="status-label">PII Detected</span>
+          <span class="status-value status-sensitive" id="pii-count">—</span>
+        </div>
+        <div class="status-card" id="card-protected">
+          <span class="status-label">Protected</span>
+          <span class="status-value status-safe" id="pii-protected">—</span>
+        </div>
+        <div class="status-card" id="card-backend">
+          <span class="status-label">AI Server</span>
+          <span class="status-value" id="backend-status">Checking…</span>
+        </div>
+      </div>
+
+      <button class="btn btn-outline btn-sm w-full" id="scan-btn" style="margin-bottom: 1rem;">🔍 Scan Page</button>
+
+      <div class="import-section" style="margin-bottom: 1rem; padding: 1rem; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);">
+        <label class="input-label" for="p-import-file">Import from Word (.docx)</label>
+        <input type="file" id="p-import-file" accept=".docx" style="display: block; margin-bottom: 0.5rem; width: 100%; font-size: 0.85rem;" />
+        <button type="button" class="btn btn-outline btn-sm w-full" id="import-word-btn">📄 Extract Profile</button>
+        <div id="import-status" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); text-align: center;"></div>
+      </div>
+
+      <div class="task-section">
+        <label class="input-label" for="task-input">What should the agent do?</label>
+        <div class="task-input-wrapper">
+          <textarea id="task-input" class="task-textarea" placeholder="e.g. Fill my registration form and submit it" rows="3"></textarea>
+        </div>
+        <p class="input-hint" id="task-hint">Private data stays on your device.</p>
+      </div>
+
+      <button class="btn btn-primary btn-lg w-full" id="run-btn" disabled>
+        <span id="run-btn-text">Start Agent</span>
       </button>
-      <div id="import-status" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); text-align: center;"></div>
-    </div>
 
-    <!-- Task input -->
-    <div class="task-section">
-      <label class="input-label" for="task-input">What should the agent do?</label>
-      <div class="task-input-wrapper">
-        <textarea
-          id="task-input"
-          class="task-textarea"
-          placeholder="e.g. Fill my registration form and submit it"
-          rows="3"
-          aria-describedby="task-hint"
-        ></textarea>
+      <!-- Progress log -->
+      <div class="progress-section" id="progress-section" style="display:none">
+        <div class="progress-header">
+          <span class="progress-title">Agent Log</span>
+          <span class="spinner" id="progress-spinner" aria-hidden="true"></span>
+        </div>
+        <div class="log-entries" id="log-entries" aria-live="polite"></div>
       </div>
-      <p class="input-hint" id="task-hint">Private data stays on your device.</p>
-    </div>
 
-    <!-- Run button -->
-    <button class="btn btn-primary btn-lg w-full" id="run-btn" disabled>
-      <span id="run-btn-icon">▶</span>
-      <span id="run-btn-text">Start Agent</span>
-    </button>
-
-    <!-- Progress log -->
-    <div class="progress-section" id="progress-section" style="display:none">
-      <div class="progress-header">
-        <span class="progress-title">Agent Log</span>
-        <span class="spinner" id="progress-spinner" aria-hidden="true"></span>
-      </div>
-      <div class="log-entries" id="log-entries" aria-live="polite" aria-label="Agent activity log"></div>
-    </div>
-
-    <!-- Metrics (shown after completion) -->
-    <div class="metrics-section" id="metrics-section" style="display:none">
-      <div class="metrics-title">⚡ Performance</div>
-      <div class="metrics-grid">
-        <div class="metric-item">
-          <span class="metric-label">Page Scan</span>
-          <span class="metric-val" id="m-scan">—</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">AI Reasoning</span>
-          <span class="metric-val" id="m-backend">—</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Execution</span>
-          <span class="metric-val" id="m-exec">—</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-label">Total</span>
-          <span class="metric-val metric-total" id="m-total">—</span>
+      <!-- Metrics -->
+      <div class="metrics-section" id="metrics-section" style="display:none">
+        <div class="metrics-title">⚡ Performance</div>
+        <div class="metrics-grid">
+          <div class="metric-item"><span class="metric-label">Page Scan</span><span class="metric-val" id="m-scan">—</span></div>
+          <div class="metric-item"><span class="metric-label">AI Reasoning</span><span class="metric-val" id="m-backend">—</span></div>
+          <div class="metric-item"><span class="metric-label">Execution</span><span class="metric-val" id="m-exec">—</span></div>
+          <div class="metric-item"><span class="metric-label">Total</span><span class="metric-val metric-total" id="m-total">—</span></div>
         </div>
       </div>
-    </div>
+    </section>
 
-  </section>
-
-
-
-  <!-- ═══════════════════════════════════════════
-       TAB 3: PRIVACY DASHBOARD
-  ═══════════════════════════════════════════ -->
-  <section class="tab-panel" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
-
-    <div class="section-header">
-      <h2>Privacy Dashboard</h2>
-      <p class="section-desc">What stays on your device vs. what the AI sees.</p>
-    </div>
-
-    <!-- Privacy score card -->
-    <div class="privacy-score-card" id="privacy-score-card">
-      <div class="score-circle" id="score-circle">
-        <span class="score-num" id="score-num">—</span>
-        <span class="score-label-sm">score</span>
+    <!-- TAB 2: PRIVACY DASHBOARD -->
+    <section class="tab-panel" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="section-header"><h2>Privacy Dashboard</h2><p class="section-desc">What stays on your device vs. what the AI sees.</p></div>
+      <div class="privacy-score-card" id="privacy-score-card">
+        <div class="score-circle" id="score-circle"><span class="score-num" id="score-num">—</span><span class="score-label-sm">score</span></div>
+        <div class="score-details"><div class="score-title" id="score-title">Scan a page to see results</div><div class="score-sub" id="score-sub">Open the Agent tab and click Scan Page</div></div>
       </div>
-      <div class="score-details">
-        <div class="score-title" id="score-title">Scan a page to see results</div>
-        <div class="score-sub" id="score-sub">Open the Agent tab and click Scan Page</div>
+      <div class="split-panel">
+        <div class="split-col local-col"><div class="split-header"><span class="split-title">Stays Local</span></div><ul class="split-list" id="local-list"><li class="split-empty">No scan yet</li></ul></div>
+        <div class="split-col server-col"><div class="split-header"><span class="split-title">Sent to Server</span></div><ul class="split-list" id="server-list"><li class="split-empty">No scan yet</li></ul></div>
       </div>
-    </div>
-
-    <!-- Split: Local vs Server -->
-    <div class="split-panel">
-      <div class="split-col local-col">
-        <div class="split-header">
-          <span class="split-icon">🔒</span>
-          <span class="split-title">Stays Local</span>
-        </div>
-        <ul class="split-list" id="local-list">
-          <li class="split-empty">No scan yet</li>
-        </ul>
+      <div class="category-section" id="category-section" style="display:none">
+        <div class="cat-title">PII Categories Detected</div><div class="cat-grid" id="cat-grid"></div>
       </div>
-      <div class="split-col server-col">
-        <div class="split-header">
-          <span class="split-icon">☁️</span>
-          <span class="split-title">Sent to Server</span>
-        </div>
-        <ul class="split-list" id="server-list">
-          <li class="split-empty">No scan yet</li>
-        </ul>
+      <div class="server-context-section" id="server-context-section" style="display:none">
+        <div class="server-ctx-title">🤖 What the AI Received</div><pre class="server-ctx-pre" id="server-ctx-pre"></pre>
       </div>
-    </div>
+    </section>
 
-    <!-- Category breakdown -->
-    <div class="category-section" id="category-section" style="display:none">
-      <div class="cat-title">PII Categories Detected</div>
-      <div class="cat-grid" id="cat-grid"></div>
-    </div>
-
-    <!-- What was sent -->
-    <div class="server-context-section" id="server-context-section" style="display:none">
-      <div class="server-ctx-title">🤖 What the AI Received</div>
-      <pre class="server-ctx-pre" id="server-ctx-pre"></pre>
-    </div>
-
-  </section>
-
-  <!-- ═══════════════════════════════════════════
-       TAB 4: SETTINGS
-  ═══════════════════════════════════════════ -->
-  <section class="tab-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
-
-    <div class="section-header">
-      <h2>Settings</h2>
-    </div>
-
-    <div class="settings-list">
-
-      <div class="setting-item">
-        <div class="setting-info">
-          <span class="setting-name">Backend URL</span>
-          <span class="setting-desc">FastAPI server address</span>
-        </div>
-        <input type="text" id="s-backend-url" class="setting-input" value="http://localhost:8000" />
+    <!-- TAB 3: SETTINGS -->
+    <section class="tab-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
+      <div class="section-header"><h2>Settings</h2></div>
+      <div class="settings-list">
+        <div class="setting-item"><div class="setting-info"><span class="setting-name">Backend URL</span></div><input type="text" id="s-backend-url" class="setting-input" value="http://localhost:8000" /></div>
+        <div class="setting-item"><div class="setting-info"><span class="setting-name">Ollama Model</span></div><input type="text" id="s-ollama-model" class="setting-input" value="llama3.2" /></div>
+        <div class="setting-item"><div class="setting-info"><span class="setting-name">Action Delay</span></div><input type="number" id="s-action-delay" class="setting-input" value="600" min="0" max="3000" /></div>
+        <div class="setting-item toggle-item"><div class="setting-info"><span class="setting-name">Privacy Protection</span></div><label class="toggle"><input type="checkbox" id="s-privacy" checked /><span class="toggle-slider"></span></label></div>
+        <div class="setting-item toggle-item"><div class="setting-info"><span class="setting-name">Confirmation Step</span></div><label class="toggle"><input type="checkbox" id="s-confirm" checked /><span class="toggle-slider"></span></label></div>
       </div>
+      <button class="btn btn-primary w-full" id="save-settings-btn">Save Settings</button>
+      <div class="save-status" id="settings-status" aria-live="polite"></div>
+    </section>
 
-      <div class="setting-item">
-        <div class="setting-info">
-          <span class="setting-name">Ollama Model</span>
-          <span class="setting-desc">Local LLM model name</span>
-        </div>
-        <input type="text" id="s-ollama-model" class="setting-input" value="llama3.2" />
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-info">
-          <span class="setting-name">Action Delay</span>
-          <span class="setting-desc">Pause between actions (ms)</span>
-        </div>
-        <input type="number" id="s-action-delay" class="setting-input" value="600" min="0" max="3000" />
-      </div>
-
-      <div class="setting-item toggle-item">
-        <div class="setting-info">
-          <span class="setting-name">Privacy Protection</span>
-          <span class="setting-desc">Redact PII before sending to server</span>
-        </div>
-        <label class="toggle" aria-label="Privacy protection toggle">
-          <input type="checkbox" id="s-privacy" checked />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <div class="setting-item toggle-item">
-        <div class="setting-info">
-          <span class="setting-name">Confirmation Step</span>
-          <span class="setting-desc">Show form review before submit</span>
-        </div>
-        <label class="toggle" aria-label="Confirmation step toggle">
-          <input type="checkbox" id="s-confirm" checked />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-    </div>
-
-    <button class="btn btn-primary w-full" id="save-settings-btn">Save Settings</button>
-    <div class="save-status" id="settings-status" aria-live="polite"></div>
-
-    <div class="settings-footer">
-      <p>SIH26171 — Privacy-Preserving AI Browser Agent</p>
-      <p>Built for Smart India Hackathon 2024</p>
-    </div>
-
-  </section>
+  </div>
 
   <script src="popup.js"></script>
 </body>

@@ -222,6 +222,29 @@
   };
 
   /* ─────────────────────────────────────────
+     SCROLL REVEAL ANIMATION
+  ───────────────────────────────────────── */
+  const observerOptions = {
+    root: null,
+    rootMargin: '50px', // trigger 50px before it even enters viewport
+    threshold: 0.01     // trigger immediately
+  };
+
+  const observer = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('active');
+        // Optional: stop observing once revealed
+        // observer.unobserve(entry.target);
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.reveal').forEach(el => {
+    observer.observe(el);
+  });
+
+  /* ─────────────────────────────────────────
      UTILITY
   ───────────────────────────────────────── */
   function escapeHtml(str) {
