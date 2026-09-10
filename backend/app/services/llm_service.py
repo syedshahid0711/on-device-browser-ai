@@ -211,3 +211,57 @@ async def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         confidence = float(data.get("confidence", 1.0)),
         model_used = OLLAMA_MODEL,
     )
+
+# ── Profile Extraction ────────────────────────────────────────────────────────
+
+EXTRACT_SYSTEM_PROMPT = """You are an AI data extractor. Your job is to extract a user's profile information from the provided raw text (like a resume or personal document) and output it as a strict JSON object.
+
+Extract as many of these fields as you can find:
+- "name" (Full name)
+- "email"
+- "phone"
+- "dob" (Date of birth in YYYY-MM-DD format if possible)
+- "address" (Full address)
+- "employee_id"
+- "division" (e.g. aeronautics, propulsion, spacecraft, avionics, mission_control)
+- "gender" (male, female, non_binary, prefer_not)
+- "clearance" (level_1, level_2, secret, top_secret)
+
+If a field is not found in the text, omit it from the JSON.
+Do not extract passwords.
+Return ONLY valid JSON. No markdown, no extra text.
+"""
+
+async def extract_profile_from_text(text: str) -> dict:
+    """
+    Send raw text to Ollama to extract profile fields into JSON.
+    """
+    log.info("Extracting profile from text using model=%s", OLLAMA_MODEL)
+    payload = {
+        "model": OLLAMA_MODEL,
+        "stream": False,
+        "messages": [
+            {"role": "system", "content": EXTRACT_SYSTEM_PROMPT},
+            {"role": "user", "content": f"Extract profile data from this text:\\n\\n{text}"},
+        ],
+        "options": {
+            "temperature": 0.1,
+            "num_predict": 1024,
+            "num_ctx": 4096,
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT_SEC) as client:
+            resp = await client.post(f"{OLLAMA_URL}/api/chat", json=payload)
+            resp.raise_for_status()
+    except Exception as e:
+        log.error("Ollama extraction failed: %s", e)
+        raise RuntimeError(f"Extraction failed: {e}")
+
+    raw_content = resp.json()["message"]["content"]
+    try:
+        return extract_json(raw_content)
+    except Exception as e:
+        log.error("Failed to parse extracted JSON: %s\\nRaw: %s", e, raw_content[:300])
+        raise RuntimeError("LLM returned invalid JSON for profile extraction")

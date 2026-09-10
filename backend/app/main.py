@@ -5,7 +5,7 @@ FastAPI application entry point.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import health, analyze, task
+from app.routes import health, analyze, task, extract
 from app.utils.logger import get_logger
 import os
 
@@ -36,6 +36,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(analyze.router, prefix="/api", tags=["Agent"])
 app.include_router(task.router,    prefix="/api", tags=["Tasks"])
+app.include_router(extract.router)
 
 
 @app.get("/", include_in_schema=False)

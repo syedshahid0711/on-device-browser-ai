@@ -234,6 +234,93 @@
   });
 
   /* ─────────────────────────────────────
+     WORD DOCUMENT IMPORT
+  ───────────────────────────────────── */
+  const importFile      = document.getElementById('p-import-file');
+  const importBtn       = document.getElementById('import-word-btn');
+  const importStatus    = document.getElementById('import-status');
+
+  importBtn.addEventListener('click', async () => {
+    if (!importFile.files || importFile.files.length === 0) {
+      importStatus.textContent = 'Please select a .docx file first.';
+      importStatus.style.color = 'var(--status-warn)';
+      return;
+    }
+
+    const file = importFile.files[0];
+    if (!file.name.endsWith('.docx')) {
+      importStatus.textContent = 'Only .docx files are supported.';
+      importStatus.style.color = 'var(--status-warn)';
+      return;
+    }
+
+    importBtn.disabled = true;
+    importBtn.textContent = '⏳ Extracting...';
+    importStatus.textContent = 'Sending to local AI...';
+    importStatus.style.color = 'inherit';
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Get backend URL from settings or default
+      const s = await loadSettings();
+      const backendUrl = s.backendUrl || 'http://localhost:8000';
+      
+      const res = await fetch(`${backendUrl}/api/extract/profile`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+
+      const json = await res.json();
+      if (!json.success || !json.data) {
+        throw new Error('Failed to parse profile data from file.');
+      }
+
+      const p = json.data;
+      let fieldsUpdated = 0;
+
+      // Populate form fields with extracted data
+      PROFILE_FIELDS.forEach(key => {
+        const el = document.getElementById(`p-${key.replace('_','-')}`);
+        if (el && p[key] !== undefined && p[key] !== null && p[key] !== '') {
+          // If it's a select field, try to match case-insensitively
+          if (el.tagName.toLowerCase() === 'select') {
+            for (let i = 0; i < el.options.length; i++) {
+              if (el.options[i].value === p[key] || el.options[i].value.replace('_', ' ') === p[key].replace('_', ' ')) {
+                el.selectedIndex = i;
+                fieldsUpdated++;
+                break;
+              }
+            }
+          } else {
+            el.value = p[key];
+            fieldsUpdated++;
+          }
+        }
+      });
+
+      importStatus.textContent = `✓ Extracted ${fieldsUpdated} fields! Review & click Save.`;
+      importStatus.style.color = 'var(--status-ok)';
+      
+      // Clear file input so they can upload again if needed
+      importFile.value = '';
+      
+    } catch (err) {
+      console.error('Import error:', err);
+      importStatus.textContent = '✗ Extraction failed: ' + err.message;
+      importStatus.style.color = 'var(--status-error)';
+    } finally {
+      importBtn.disabled = false;
+      importBtn.textContent = '📄 Extract Profile';
+    }
+  });
+
+  /* ─────────────────────────────────────
      PRIVACY DASHBOARD
   ───────────────────────────────────── */
   const localList    = document.getElementById('local-list');

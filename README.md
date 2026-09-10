@@ -33,6 +33,7 @@ Form submitted ✓
 - Python 3.11+
 - Google Chrome
 - [Ollama](https://ollama.ai) installed and running
+- `python-docx` and `python-multipart` (included in requirements.txt)
 
 ### 1. Start Ollama
 ```powershell
@@ -70,7 +71,7 @@ python -m http.server 5500
 ### 5. Run the Demo
 1. Open `http://localhost:5500` in Chrome
 2. Click the 🛡️ extension icon
-3. Go to **👤 Profile** tab → fill in your details → **Save Profile Locally**
+3. Go to **👤 Profile** tab → fill in your details manually OR click **Import from Word (.docx)** to automatically extract your resume/profile via local AI → **Save Profile Locally**
 4. Go to **🤖 Agent** tab → click **Scan Page**
 5. Type: `Fill my registration form and submit it`
 6. Click **Start Agent**
@@ -93,6 +94,7 @@ extension/
 backend/
 ├── app/main.py                FastAPI entry point
 ├── app/routes/analyze.py      POST /api/analyze (core endpoint)
+├── app/routes/extract.py      POST /api/extract/profile (Word doc import)
 ├── app/routes/health.py       GET /api/health
 ├── app/routes/task.py         POST /api/task (history)
 ├── app/services/llm_service.py    Ollama integration
@@ -109,6 +111,7 @@ docs/                          Architecture + API docs
 | Data | Where It Stays |
 |---|---|
 | Name, Email, Phone, Password, DOB, Address | ✅ Chrome local storage only |
+| Word Document Resumes/Profiles | ✅ Temporarily sent to local backend for AI extraction, then immediately discarded |
 | Form structure (labels, field types) | ✅ Sent to backend (sanitized) |
 | Actual PII values | ❌ NEVER sent to backend |
 | AI action plan | ✅ Received from backend (no PII) |

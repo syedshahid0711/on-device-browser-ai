@@ -137,6 +137,16 @@
       🔒 All data stored in chrome.storage.local only
     </div>
 
+    <!-- Word Document Import -->
+    <div class="import-section" style="margin-bottom: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);">
+      <label class="input-label" for="p-import-file">Import from Word (.docx)</label>
+      <input type="file" id="p-import-file" accept=".docx" style="display: block; margin-bottom: 0.5rem; width: 100%; font-size: 0.85rem;" />
+      <button type="button" class="btn btn-outline btn-sm w-full" id="import-word-btn">
+        📄 Extract Profile
+      </button>
+      <div id="import-status" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); text-align: center;"></div>
+    </div>
+
     <form id="profile-form" autocomplete="on" novalidate>
       <div class="field-group">
         <label for="p-name">Full Name</label>
