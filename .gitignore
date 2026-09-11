@@ -48,7 +48,7 @@ extension/*.pem
 # ONNX / AI model weights (large files — track with Git LFS if needed)
 *.onnx
 *.bin
-models/
+/models/
 
 # Misc
 *.bak

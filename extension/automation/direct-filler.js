@@ -197,213 +197,227 @@
   }
 
   function showMissingDataModal(missingKeys) {
-    const existing = document.getElementById('pba-missing-modal-overlay');
-    if (existing) existing.remove();
+    // Exclude password completely from missing values list
+    const filteredKeys = (missingKeys || []).filter(k => String(k).toLowerCase() !== 'password');
+    if (filteredKeys.length === 0) {
+      return;
+    }
 
+    // Remove any existing modals
+    document.querySelectorAll('#pba-missing-modal-overlay, .pba-missing-toast').forEach(el => el.remove());
     const existingStyle = document.getElementById('pba-force-cursor-style');
     if (existingStyle) existingStyle.remove();
 
-    // 1. Force cursor visibility at document root level
-    const styleEl = document.createElement('style');
-    styleEl.id = 'pba-force-cursor-style';
-    styleEl.textContent = `
-      html, body, html *, body * {
-        cursor: auto !important;
-      }
-      #pba-missing-modal-overlay, #pba-missing-modal-overlay * {
-        cursor: auto !important;
-        pointer-events: auto !important;
-        box-sizing: border-box !important;
-      }
-      #pba-close-missing-modal, #pba-x-close-btn {
-        cursor: pointer !important;
-      }
-      #pba-close-missing-modal:hover {
-        background: #fbbf24 !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 0 24px rgba(245, 158, 11, 0.6) !important;
-      }
-      #pba-x-close-btn:hover {
-        background: rgba(245, 158, 11, 0.3) !important;
-        color: #ffffff !important;
-        transform: scale(1.1) !important;
-      }
-    `;
-    (document.head || document.documentElement).appendChild(styleEl);
-
-    const uniqueKeys = Array.from(new Set(missingKeys));
+    const uniqueKeys = Array.from(new Set(filteredKeys));
     const labelsList = uniqueKeys.map(k => FRIENDLY_NAMES[k] || k);
 
     const overlay = document.createElement('div');
     overlay.id = 'pba-missing-modal-overlay';
     overlay.style.cssText = `
       position: fixed !important;
-      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-      background: rgba(2, 8, 13, 0.90) !important;
-      backdrop-filter: blur(12px) !important;
-      -webkit-backdrop-filter: blur(12px) !important;
+      inset: 0 !important;
       z-index: 2147483647 !important;
+      background: rgba(1, 8, 14, 0.85) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      padding: 16px !important;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
-      cursor: auto !important;
+      padding: 20px !important;
+      cursor: default !important;
       pointer-events: auto !important;
     `;
 
     overlay.innerHTML = `
-      <div id="pba-modal-glow-cursor" style="
-        position: fixed; width: 24px; height: 24px; border-radius: 50%;
-        border: 2px solid #f59e0b; background: rgba(245, 158, 11, 0.2);
-        pointer-events: none; z-index: 2147483647; transform: translate(-50%, -50%);
-        box-shadow: 0 0 12px #f59e0b; display: none; transition: transform 0.05s ease;
-      "></div>
-
-      <div id="pba-missing-card" style="
-        background: #020b12 !important;
+      <div class="pba-missing-card" style="
+        background: linear-gradient(145deg, rgba(8, 20, 32, 0.98) 0%, rgba(2, 10, 18, 0.99) 100%) !important;
         border: 1.5px solid #f59e0b !important;
-        border-radius: 16px !important;
-        max-width: 460px !important;
-        width: 92% !important;
-        max-height: 88vh !important;
-        overflow-y: auto !important;
-        padding: clamp(18px, 4vw, 26px) !important;
-        box-shadow: 0 0 35px rgba(245, 158, 11, 0.4), 0 16px 50px rgba(0,0,0,0.85) !important;
-        color: #d9f7ff !important;
+        border-radius: 20px !important;
+        padding: 32px 28px !important;
+        max-width: 480px !important;
+        width: 100% !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(245, 158, 11, 0.3) !important;
+        color: #e2e8f0 !important;
         position: relative !important;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+        pointer-events: auto !important;
+        text-align: left !important;
       ">
-        <button id="pba-x-close-btn" title="Close modal" aria-label="Close dialog" type="button" onclick="var el=document.getElementById('pba-missing-modal-overlay'); if(el) el.remove(); var st=document.getElementById('pba-force-cursor-style'); if(st) st.remove();" style="
+        <!-- Top Right Close Button -->
+        <button id="pba-x-close-btn" class="pba-close-trigger" type="button" aria-label="Close dialog" title="Close" onclick="var m=document.getElementById('pba-missing-modal-overlay');if(m)m.remove();" style="
           position: absolute !important;
-          top: 14px !important;
-          right: 14px !important;
-          width: 34px !important;
-          height: 34px !important;
-          border-radius: 50% !important;
+          top: 16px !important;
+          right: 16px !important;
           background: rgba(245, 158, 11, 0.12) !important;
-          border: 1px solid rgba(245, 158, 11, 0.4) !important;
+          border: 1px solid rgba(245, 158, 11, 0.35) !important;
           color: #f59e0b !important;
-          font-size: 16px !important;
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 50% !important;
+          cursor: pointer !important;
           font-weight: 800 !important;
+          font-size: 14px !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
-          cursor: pointer !important;
+          transition: all 0.2s !important;
           pointer-events: auto !important;
-          transition: all 0.2s ease !important;
         ">✕</button>
 
-        <div style="display: flex !important; align-items: center !important; gap: 12px !important; margin-bottom: 14px !important; padding-right: 32px !important;">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 18px;">
           <div style="
-            width: 44px !important; height: 44px !important; border-radius: 50% !important;
-            background: rgba(245, 158, 11, 0.15) !important; border: 1.5px solid #f59e0b !important;
-            display: flex !important; align-items: center !important; justify-content: center !important;
-            font-size: 22px !important; color: #f59e0b !important; flex-shrink: 0 !important;
-            box-shadow: 0 0 14px rgba(245, 158, 11, 0.4) !important;
+            width: 58px; height: 58px; margin: 0 auto 12px; border-radius: 50%;
+            background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; color: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
           ">⚠️</div>
-          <div>
-            <h3 style="margin:0 !important; font-size: 1.15rem !important; font-weight: 800 !important; color: #f59e0b !important; letter-spacing: 0.5px !important;">
-              Missing Data in Word File
-            </h3>
-            <p style="margin: 2px 0 0 0 !important; font-size: 0.72rem !important; color: #94a3b8 !important; font-family: monospace !important;">
-              PRIVACY VISION AI &bull; ON-DEVICE SAFETY POLICY
-            </p>
+          <div style="
+            display: inline-block; padding: 4px 12px; background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 100px;
+            color: #f59e0b; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.8px;
+            text-transform: uppercase; margin-bottom: 8px;
+          ">
+            PRIVACY VISION AI &bull; SAFETY POLICY
           </div>
+          <h3 style="margin: 0; font-size: 1.35rem; font-weight: 800; color: #ffffff; letter-spacing: -0.3px;">
+            Missing Data in Word File
+          </h3>
         </div>
 
-        <p style="font-size: 0.85rem !important; line-height: 1.5 !important; color: #cbd5e1 !important; margin-bottom: 12px !important;">
-          The following field(s) exist on this webpage form, but <strong>were not provided</strong> in your uploaded Word document:
+        <p style="margin: 0 0 14px 0; font-size: 0.88rem; line-height: 1.5; color: #cbd5e1; text-align: center;">
+          The following field(s) were <strong>not provided</strong> in your Word file and have been safely left blank:
         </p>
 
+        <!-- Missing Fields List -->
         <ul style="
-          background: rgba(245, 158, 11, 0.08) !important;
-          border: 1px solid rgba(245, 158, 11, 0.25) !important;
-          border-radius: 10px !important;
-          padding: 12px 16px 12px 32px !important;
-          margin: 0 0 16px 0 !important;
-          font-family: monospace !important;
-          font-size: 0.84rem !important;
-          color: #fef08a !important;
+          margin: 0 0 16px 0;
+          padding: 10px 18px 10px 32px;
+          background: rgba(245, 158, 11, 0.08);
+          border-radius: 10px;
+          border: 1px solid rgba(245, 158, 11, 0.25);
+          font-family: monospace;
+          font-size: 0.86rem;
+          color: #fef08a;
+          max-height: 160px;
+          overflow-y: auto;
         ">
-          ${labelsList.map(name => `<li style="margin-bottom: 4px !important;"><strong>${escapeHtml(name)}</strong></li>`).join('')}
+          ${labelsList.map(name => `<li style="margin: 3px 0;"><strong>${escapeHtml(name)}</strong></li>`).join('')}
         </ul>
 
-        <p style="font-size: 0.78rem !important; color: #94a3b8 !important; line-height: 1.4 !important; margin-bottom: 20px !important;">
-          🛡️ <em>Unknown fields were strictly left empty to prevent incorrect data injection. Only verified fields from your Word document were filled.</em>
+        <p style="margin: 0 0 22px 0; font-size: 0.78rem; line-height: 1.4; color: #94a3b8; text-align: center;">
+          🛡️ <em>To protect your identity, missing fields are never populated with guessed data. You can now complete them manually.</em>
         </p>
 
-        <button id="pba-close-missing-modal" type="button" onclick="var el=document.getElementById('pba-missing-modal-overlay'); if(el) el.remove(); var st=document.getElementById('pba-force-cursor-style'); if(st) st.remove();" style="
-          width: 100% !important;
-          background: #f59e0b !important;
-          color: #02080d !important;
-          border: none !important;
-          border-radius: 10px !important;
-          padding: 12px !important;
-          font-size: 0.88rem !important;
-          font-weight: 900 !important;
-          letter-spacing: 0.5px !important;
-          cursor: pointer !important;
-          pointer-events: auto !important;
-          transition: all 0.2s ease !important;
-          box-shadow: 0 0 16px rgba(245, 158, 11, 0.4) !important;
-        ">OK, Got It ✓</button>
+        <!-- Action Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button id="pba-close-missing-modal" class="pba-close-trigger" type="button" onclick="var m=document.getElementById('pba-missing-modal-overlay');if(m)m.remove();" style="
+            width: 100%;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #02080d;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 0.90rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 18px rgba(245, 158, 11, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            pointer-events: auto !important;
+          ">
+            ✕ Close &amp; Return to Form
+          </button>
+
+          <button id="pba-back-nav-btn" class="pba-close-trigger" type="button" style="
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            pointer-events: auto !important;
+          ">
+            ← Return to Dashboard Overview
+          </button>
+        </div>
       </div>
     `;
 
-    document.body.appendChild(overlay);
+    document.documentElement.appendChild(overlay);
 
-    const glowCursor = document.getElementById('pba-modal-glow-cursor');
+    function removeModal() {
+      const el = document.getElementById('pba-missing-modal-overlay');
+      if (el) {
+        el.remove();
+      }
+      document.querySelectorAll('#pba-missing-modal-overlay, .pba-missing-toast').forEach(e => e.remove());
+      window.removeEventListener('keydown', onKey, true);
+    }
 
-    function onMouseMove(e) {
-      if (glowCursor) {
-        glowCursor.style.display = 'block';
-        glowCursor.style.left = e.clientX + 'px';
-        glowCursor.style.top = e.clientY + 'px';
+    function returnToDashboard() {
+      removeModal();
+      // If on the ISRO Galaxy dashboard, navigate to Overview tab
+      const overviewNav = Array.from(document.querySelectorAll('.nav-item, button, a')).find(
+        el => el.textContent && el.textContent.includes('Overview')
+      );
+      if (overviewNav) {
+        overviewNav.click();
+      } else {
+        window.history.back();
       }
     }
 
-    overlay.addEventListener('mousemove', onMouseMove);
-
-    function closeModal() {
-      if (overlay && overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-      if (styleEl && styleEl.parentNode) {
-        styleEl.parentNode.removeChild(styleEl);
-      }
-      window.removeEventListener('keydown', handleKey, true);
-    }
-
-    function handleKey(e) {
-      if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
-        closeModal();
+    function onKey(e) {
+      if (e.key === 'Escape' || e.key === 'Enter') {
+        removeModal();
       }
     }
+    window.addEventListener('keydown', onKey, true);
 
-    ['click', 'pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach(evtType => {
-      const mainBtn = document.getElementById('pba-close-missing-modal');
-      const xBtn = document.getElementById('pba-x-close-btn');
+    // Multiple redundant event listener bindings for 100% click reliability
+    const okBtn = overlay.querySelector('#pba-close-missing-modal');
+    const xBtn = overlay.querySelector('#pba-x-close-btn');
+    const backBtn = overlay.querySelector('#pba-back-nav-btn');
 
-      if (mainBtn) mainBtn.addEventListener(evtType, function (e) {
-        e.stopPropagation();
-        closeModal();
-      }, true);
+    if (okBtn) {
+      okBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); removeModal(); };
+      ['click', 'pointerdown', 'mousedown'].forEach(evt => {
+        okBtn.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); removeModal(); }, true);
+      });
+    }
 
-      if (xBtn) xBtn.addEventListener(evtType, function (e) {
-        e.stopPropagation();
-        closeModal();
-      }, true);
-    });
+    if (xBtn) {
+      xBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); removeModal(); };
+      ['click', 'pointerdown', 'mousedown'].forEach(evt => {
+        xBtn.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); removeModal(); }, true);
+      });
+    }
 
-    window.addEventListener('keydown', handleKey, true);
+    if (backBtn) {
+      backBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); returnToDashboard(); };
+      ['click', 'pointerdown', 'mousedown'].forEach(evt => {
+        backBtn.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); returnToDashboard(); }, true);
+      });
+    }
 
-    ['click', 'pointerdown', 'mousedown'].forEach(evtType => {
-      overlay.addEventListener(evtType, function (e) {
-        if (e.target === overlay) {
-          closeModal();
-        }
-      }, true);
-    });
+    // Dismiss if user clicks outside the modal card
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        removeModal();
+      }
+    }, true);
   }
 
   /**
@@ -422,6 +436,17 @@
       ? new Set(targetKeys.map(k => String(k).toLowerCase().trim()))
       : null;
 
+    // If no form element is present on page, check if we are on the ISRO Galaxy dashboard
+    if (!document.querySelector('form')) {
+      const docNav = Array.from(document.querySelectorAll('.nav-item, button, a')).find(
+        el => el.textContent && (el.textContent.includes('Documents') || el.textContent.includes('ISRO Form'))
+      );
+      if (docNav) {
+        docNav.click();
+        await new Promise(r => setTimeout(r, 450));
+      }
+    }
+
     // Show banner
     if (window.__agentBanner) window.__agentBanner.show('🤖 Agent filling requested fields…');
 
@@ -435,10 +460,11 @@
 
       // If form element exists on page BUT data is missing from Word profile:
       if (el && (!value || String(value).trim() === '')) {
-        if (!missingInProfile.includes(mapping.key)) {
+        // Exclude password from missing list (users do not put passwords in resumes/Word files)
+        if (mapping.key.toLowerCase() !== 'password' && !missingInProfile.includes(mapping.key)) {
           missingInProfile.push(mapping.key);
         }
-        skipped.push(mapping.key + ' (missing in Word document)');
+        skipped.push(mapping.key + ' (left blank — not in Word document)');
         continue; // DO NOT fill unknown data into the element!
       }
 

@@ -321,71 +321,125 @@ export default function App() {
   const [inspectorProfile, setInspectorProfile] = useState({});
   const [inspectorFillDetails, setInspectorFillDetails] = useState([]);
 
+  // All fields start empty — populated only from attached Word file
   const [isroFormData, setIsroFormData] = useState({
-    full_name: "Shahid Khan",
-    employee_id: "EMP2024001",
-    dob: "1998-05-15",
-    gender: "male",
-    email: "syedshahid0711@gmail.com",
-    phone: "+91 98765 43210",
-    address: "ISRO Headquarters, Bengaluru, Karnataka",
-    division: "spacecraft",
-    clearance_level: "secret",
+    full_name: "",
+    employee_id: "",
+    dob: "",
+    gender: "",
+    email: "",
+    phone: "",
+    address: "",
+    division: "",
+    clearance_level: "",
     password: "",
     confirm_password: "",
-    terms: true,
+    terms: false,
   });
 
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [showThankYouModal, setShowThankYouModal] = useState(false);
+  const [submissionRef, setSubmissionRef] = useState("");
+  const [copiedRef, setCopiedRef] = useState(false);
+  const [missingFields, setMissingFields] = useState([]);
+  const [showMissingPopup, setShowMissingPopup] = useState(false);
+  const [wordFileLoaded, setWordFileLoaded] = useState(false);
 
-  /* Load inspector profile from Chrome storage or use demo data */
+  // Profile keys → form field names
+  const PROFILE_TO_FORM = {
+    name: "full_name",
+    full_name: "full_name",
+    employee_id: "employee_id",
+    dob: "dob",
+    gender: "gender",
+    email: "email",
+    phone: "phone",
+    address: "address",
+    division: "division",
+    clearance: "clearance_level",
+    clearance_level: "clearance_level",
+  };
+
+  // Fields that must be present (excluding password — user enters manually)
+  const REQUIRED_FORM_FIELDS = ["full_name", "employee_id", "dob", "gender", "email", "phone", "address", "division", "clearance_level"];
+
+  /* Load inspector profile from Chrome storage */
   const loadInspectorData = () => {
     if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
       window.chrome.storage.local.get(["pba_user_profile", "pba_fill_details"], (res) => {
         setInspectorProfile(res.pba_user_profile || {});
         setInspectorFillDetails(res.pba_fill_details || []);
       });
-    } else {
-      /* Demo fallback for standalone React app */
-      setInspectorProfile({
-        name: "Shahid Khan",
-        employee_id: "EMP2024001",
-        dob: "1998-05-15",
-        gender: "Male",
-        email: "syedshahid0711@gmail.com",
-        phone: "+91 98765 43210",
-        address: "ISRO Headquarters, Bengaluru, Karnataka",
-        division: "Spacecraft",
-        clearance: "Secret",
-      });
-      setInspectorFillDetails([]);
     }
   };
 
-  const openDataInspector = () => {
+  /* Load Word file profile from Chrome storage and auto-populate form */
+  const loadAndApplyWordProfile = () => {
+    if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
+      window.chrome.storage.local.get(["pba_user_profile", "pba_fill_details"], (res) => {
+        const profile = res.pba_user_profile || {};
+        setInspectorProfile(profile);
+        setInspectorFillDetails(res.pba_fill_details || []);
+
+        if (Object.keys(profile).length === 0) return;
+
+        // Map profile keys → form state
+        const newForm = {
+          full_name: "",
+          employee_id: "",
+          dob: "",
+          gender: "",
+          email: "",
+          phone: "",
+          address: "",
+          division: "",
+          clearance_level: "",
+          password: "",
+          confirm_password: "",
+          terms: false,
+        };
+
+        Object.entries(profile).forEach(([key, val]) => {
+          const formKey = PROFILE_TO_FORM[key] || key;
+          if (formKey in newForm && val) {
+            newForm[formKey] = String(val).trim();
+          }
+        });
+
+        setIsroFormData(newForm);
+        setWordFileLoaded(true);
+
+        // Find which required fields are still missing
+        const missing = REQUIRED_FORM_FIELDS.filter(f => !newForm[f] || String(newForm[f]).trim() === "");
+        setMissingFields(missing);
+      });
+    }
+  };
+
+  useEffect(() => {
+    loadInspectorData();
+    loadAndApplyWordProfile();
+  }, []);
+
+  const openInspector = () => {
     setPrevTab(activeTab);
     loadInspectorData();
     setActiveTab("inspector");
   };
+  const openDataInspector = openInspector;
 
   const closeInspector = () => {
     setActiveTab(prevTab);
   };
 
   useEffect(() => {
-    const moveCursor = (event) => {
+    const moveCursor = (e) => {
       if (!cursorRef.current) return;
-      cursorRef.current.style.transform =
-        `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
+      cursorRef.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
     };
 
-    const handleDown = () => {
-      cursorRef.current?.classList.add("cursor-click");
-    };
-
-    const handleUp = () => {
-      cursorRef.current?.classList.remove("cursor-click");
-    };
+    const handleDown = () => cursorRef.current?.classList.add("cursor-click");
+    const handleUp = () => cursorRef.current?.classList.remove("cursor-click");
 
     window.addEventListener("mousemove", moveCursor);
     window.addEventListener("mousedown", handleDown);
@@ -407,11 +461,22 @@ export default function App() {
   };
 
   const handleFormSubmit = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+
+    // Check for missing required fields (excluding password)
+    const missing = REQUIRED_FORM_FIELDS.filter(f => !isroFormData[f] || String(isroFormData[f]).trim() === "");
+
+    if (missing.length > 0) {
+      setMissingFields(missing);
+      setShowMissingPopup(true);
+      return; // Don't submit — show missing popup first
+    }
+
+    // All required fields present — submit!
+    const ref = `ISRO-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    setSubmissionRef(ref);
+    setShowThankYouModal(true);
     setFormSubmitted(true);
-    setTimeout(() => {
-      setFormSubmitted(false);
-    }, 4000);
   };
 
   const openWebDemoForm = () => {
@@ -717,13 +782,19 @@ export default function App() {
                   <span className="isro-badge-tag">ISRO OFFICIAL FORM</span>
                 </div>
 
-                {formSubmitted && (
-                  <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", color: "#10b981", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px", fontWeight: "700" }}>
-                    ✅ Registration Form Submitted Successfully! Ref ID: ISRO-2024-{Math.floor(100000 + Math.random() * 900000)}
+                {/* Word file status banner */}
+                {wordFileLoaded ? (
+                  <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", color: "#34d399", borderRadius: "10px", padding: "10px 16px", marginBottom: "14px", fontWeight: "600", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px" }}>
+                    ✅ Word file profile loaded — form populated from your document
+                    <button type="button" onClick={loadAndApplyWordProfile} style={{ marginLeft: "auto", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.4)", color: "#34d399", borderRadius: "6px", padding: "3px 10px", cursor: "pointer", fontSize: "0.78rem", fontWeight: "700" }}>↻ Reload</button>
+                  </div>
+                ) : (
+                  <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245,158,11,0.4)", color: "#f59e0b", borderRadius: "10px", padding: "10px 16px", marginBottom: "14px", fontWeight: "600", fontSize: "0.85rem" }}>
+                    ⚠️ No Word file loaded — attach a .docx via the extension popup to auto-fill this form
                   </div>
                 )}
 
-                <form onSubmit={handleFormSubmit}>
+                <form onSubmit={handleFormSubmit} noValidate>
                   {/* Section 1: Personal Information */}
                   <fieldset className="cyber-fieldset">
                     <legend>👤 Personal Information</legend>
@@ -897,7 +968,11 @@ export default function App() {
                     <button type="button" className="cyber-btn-outline" onClick={openWebDemoForm}>
                       🚀 Launch External Webform
                     </button>
-                    <button type="submit" className="cyber-btn-primary">
+                    <button
+                      type="submit"
+                      className="cyber-btn-primary"
+                      id="submit-isro-app-btn"
+                    >
                       Submit ISRO Application &nbsp; ➔
                     </button>
                   </div>
@@ -991,6 +1066,263 @@ export default function App() {
           </div>
         </footer>
       </div>
+
+      {/* ═══ MISSING FIELDS POPUP ═══ */}
+      {showMissingPopup && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 999998,
+            background: "rgba(1, 8, 14, 0.88)", backdropFilter: "blur(14px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowMissingPopup(false); }}
+        >
+          <div style={{
+            background: "linear-gradient(135deg, #0d1b2a 0%, #0a1628 100%)",
+            border: "1.5px solid rgba(245, 158, 11, 0.5)",
+            borderRadius: "18px", padding: "36px 32px", maxWidth: "500px", width: "90%",
+            boxShadow: "0 0 40px rgba(245, 158, 11, 0.15)",
+            fontFamily: "Inter, sans-serif",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+              <span style={{ fontSize: "2rem" }}>⚠️</span>
+              <div>
+                <h2 style={{ margin: 0, color: "#f59e0b", fontSize: "1.25rem", fontWeight: 800 }}>
+                  Missing Information
+                </h2>
+                <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.82rem" }}>
+                  The following fields were not found in your Word file
+                </p>
+              </div>
+            </div>
+
+            <div style={{ background: "rgba(245, 158, 11, 0.07)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "10px", padding: "14px 16px", marginBottom: "24px" }}>
+              <ul style={{ margin: 0, paddingLeft: "18px", color: "#fbbf24", lineHeight: "2", fontSize: "0.9rem" }}>
+                {missingFields.map((f) => {
+                  const labels = {
+                    full_name: "Full Name", employee_id: "Employee ID", dob: "Date of Birth",
+                    gender: "Gender", email: "Email Address", phone: "Phone Number",
+                    address: "Home Address", division: "Division", clearance_level: "Clearance Level",
+                  };
+                  return <li key={f}>{labels[f] || f}</li>;
+                })}
+              </ul>
+            </div>
+
+            <p style={{ color: "#64748b", fontSize: "0.82rem", marginBottom: "22px" }}>
+              You can fill in the missing fields manually in the form, or close this popup and continue editing. The form will not submit until all required fields are filled.
+            </p>
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShowMissingPopup(false)}
+                style={{
+                  background: "transparent",
+                  border: "1.5px solid rgba(148,163,184,0.4)",
+                  color: "#94a3b8", borderRadius: "10px",
+                  padding: "10px 22px", cursor: "pointer",
+                  fontWeight: 700, fontSize: "0.88rem",
+                  transition: "all 0.2s",
+                }}
+                onMouseOver={(e) => { e.target.style.background = "rgba(148,163,184,0.1)"; e.target.style.color = "#e2e8f0"; }}
+                onMouseOut={(e) => { e.target.style.background = "transparent"; e.target.style.color = "#94a3b8"; }}
+              >
+                ✕ Close &amp; Fill Manually
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Thank You for Submitting Application Modal */}
+      {showThankYouModal && (
+        <div 
+          className="pba-thankyou-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            background: "rgba(1, 8, 14, 0.85)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setShowThankYouModal(false)}
+        >
+          <div 
+            className="pba-thankyou-card"
+            style={{
+              background: "linear-gradient(145deg, rgba(8, 22, 34, 0.98) 0%, rgba(2, 12, 20, 0.99) 100%)",
+              border: "1.5px solid #10b981",
+              borderRadius: "20px",
+              padding: "36px 32px",
+              maxWidth: "520px",
+              width: "100%",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.25)",
+              textAlign: "center",
+              color: "#e2e8f0",
+              position: "relative"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowThankYouModal(false)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                background: "rgba(255, 255, 255, 0.06)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                color: "#94a3b8",
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                cursor: "pointer",
+                fontSize: "14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s"
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Rocket Badge Icon */}
+            <div style={{
+              width: "72px",
+              height: "72px",
+              margin: "0 auto 20px",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(6, 78, 59, 0.1) 100%)",
+              border: "2px solid #10b981",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "36px",
+              boxShadow: "0 0 25px rgba(16, 185, 129, 0.4)"
+            }}>
+              🚀
+            </div>
+
+            <div style={{
+              display: "inline-block",
+              padding: "4px 12px",
+              background: "rgba(16, 185, 129, 0.15)",
+              border: "1px solid rgba(16, 185, 129, 0.4)",
+              borderRadius: "100px",
+              color: "#34d399",
+              fontSize: "0.75rem",
+              fontWeight: "700",
+              letterSpacing: "1px",
+              textTransform: "uppercase",
+              marginBottom: "12px"
+            }}>
+              ISRO OFFICIAL CONFIRMATION
+            </div>
+
+            <h2 style={{
+              fontSize: "1.5rem",
+              fontWeight: "800",
+              color: "#ffffff",
+              margin: "0 0 8px 0",
+              letterSpacing: "-0.5px"
+            }}>
+              Thank You for Submitting the Application!
+            </h2>
+
+            <p style={{
+              fontSize: "0.9rem",
+              color: "#94a3b8",
+              lineHeight: "1.5",
+              margin: "0 0 24px 0"
+            }}>
+              Your member registration has been successfully recorded. All sensitive information was protected locally on-device.
+            </p>
+
+            {/* Summary Details Box */}
+            <div style={{
+              background: "rgba(2, 6, 12, 0.6)",
+              border: "1px solid rgba(148, 163, 184, 0.15)",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "24px",
+              textAlign: "left"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", alignItems: "center" }}>
+                <span style={{ fontSize: "0.78rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Reference ID</span>
+                <span style={{ fontFamily: "monospace", fontSize: "0.92rem", fontWeight: "700", color: "#38bdf8" }}>{submissionRef}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                <span style={{ fontSize: "0.78rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Applicant</span>
+                <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#f1f5f9" }}>{isroFormData.full_name || "Applicant"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+                <span style={{ fontSize: "0.78rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Division</span>
+                <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#f1f5f9", textTransform: "capitalize" }}>{isroFormData.division || "Spacecraft"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.78rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Security Mode</span>
+                <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#10b981", background: "rgba(16, 185, 129, 0.12)", padding: "2px 8px", borderRadius: "6px", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
+                  🛡️ LOCAL ON-DEVICE
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                type="button"
+                style={{
+                  flex: 1,
+                  padding: "12px 16px",
+                  background: "rgba(255, 255, 255, 0.07)",
+                  border: "1px solid rgba(255, 255, 255, 0.18)",
+                  color: "#cbd5e1",
+                  borderRadius: "10px",
+                  fontWeight: "600",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                onClick={() => {
+                  navigator.clipboard?.writeText(submissionRef);
+                  setCopiedRef(true);
+                  setTimeout(() => setCopiedRef(false), 2000);
+                }}
+              >
+                {copiedRef ? "✓ Copied Ref ID" : "📋 Copy Ref ID"}
+              </button>
+
+              <button
+                type="button"
+                style={{
+                  flex: 1.3,
+                  padding: "12px 20px",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  border: "none",
+                  color: "#ffffff",
+                  borderRadius: "10px",
+                  fontWeight: "700",
+                  fontSize: "0.88rem",
+                  cursor: "pointer",
+                  boxShadow: "0 0 16px rgba(16, 185, 129, 0.4)",
+                  transition: "all 0.2s"
+                }}
+                onClick={() => setShowThankYouModal(false)}
+              >
+                Close &amp; Return ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

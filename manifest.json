@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "PrivacyVision",
+  "version": "1.0.0",
+  "description": "Privacy-preserving browser intelligence powered by on-device processing.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PrivacyVision"
+  },
+  "permissions": [
+    "activeTab"
+  ]
+}

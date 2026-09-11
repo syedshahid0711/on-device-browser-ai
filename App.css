@@ -36,8 +36,8 @@ button {
    CUSTOM CIRCLE CURSOR
    ========================================================= */
 
-* {
-  cursor: none !important;
+body {
+  cursor: default;
 }
 
 .custom-cursor {

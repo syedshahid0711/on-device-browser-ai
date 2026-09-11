@@ -308,20 +308,17 @@
       case 'CONFIRM_AND_SUBMIT': {
         (async () => {
           try {
-            // Submit the first form on the page directly (agent already has user consent)
-            const form = document.querySelector('form');
-            if (form) {
-              const submitBtn = form.querySelector('[type="submit"], button[type="submit"]');
-              if (submitBtn) {
-                submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                await new Promise(r => setTimeout(r, 400));
-                submitBtn.click();
-              } else {
-                form.submit();
-              }
+            // Always CLICK the submit button — never call form.submit() which causes page reload
+            const submitBtn =
+              document.getElementById('submit-isro-app-btn') ||
+              document.querySelector('button[type="submit"], input[type="submit"], #submit-btn');
+            if (submitBtn) {
+              submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              await new Promise(r => setTimeout(r, 400));
+              submitBtn.click();
               sendResponse({ ok: true, submitted: true });
             } else {
-              sendResponse({ ok: false, error: 'No form found on page' });
+              sendResponse({ ok: false, error: 'No submit button found on page' });
             }
           } catch (err) {
             sendResponse({ ok: false, error: err.message });
@@ -365,18 +362,17 @@
             const shouldSubmit = (autoSubmit === true) || (!targetKeys && autoSubmit !== false);
             if (shouldSubmit) {
               await new Promise(r => setTimeout(r, 600));
-              const form = document.querySelector('form');
-              if (form) {
-                const submitBtn = form.querySelector('[type="submit"], button[type="submit"], #submit-btn, .btn-primary');
-                if (submitBtn) {
-                  submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  await new Promise(r => setTimeout(r, 400));
-                  submitBtn.click();
-                } else {
-                  form.submit();
-                }
+              // Always CLICK the submit button — never call form.submit() which causes page navigation
+              const submitBtn =
+                document.getElementById('submit-isro-app-btn') ||
+                document.querySelector('button[type="submit"], input[type="submit"], #submit-btn');
+              if (submitBtn) {
+                submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                await new Promise(r => setTimeout(r, 400));
+                submitBtn.click();
                 result.submitted = true;
               }
+              // If no submit button found, skip — don't call form.submit() which would navigate away
             }
 
             sendResponse({ ok: true, ...result });
@@ -404,5 +400,34 @@
       .replace(/>/g,'&gt;')
       .replace(/"/g,'&quot;');
   }
+
+  // Global bulletproof dismiss for PBA overlays
+  window.addEventListener('click', function(e) {
+    const overlay = document.getElementById('pba-missing-modal-overlay');
+    if (!overlay) return;
+
+    const isCloseTrigger = e.target === overlay ||
+      (e.target.id && (e.target.id === 'pba-close-missing-modal' || e.target.id === 'pba-x-close-btn' || e.target.id === 'pba-back-nav-btn')) ||
+      (e.target.closest && e.target.closest('.pba-close-trigger'));
+
+    if (isCloseTrigger) {
+      if (e.target.id === 'pba-back-nav-btn' || (e.target.closest && e.target.closest('#pba-back-nav-btn'))) {
+        const overviewNav = Array.from(document.querySelectorAll('.nav-item, button, a')).find(
+          el => el.textContent && el.textContent.includes('Overview')
+        );
+        if (overviewNav) overviewNav.click();
+      }
+      overlay.remove();
+      const st = document.getElementById('pba-force-cursor-style');
+      if (st) st.remove();
+    }
+  }, true);
+
+  window.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.key === 'Enter') {
+      const overlay = document.getElementById('pba-missing-modal-overlay');
+      if (overlay) overlay.remove();
+    }
+  }, true);
 
 })();

@@ -178,15 +178,17 @@
       if (otpStatusBadge) otpStatusBadge.textContent = 'OTP SENT';
 
       if (data && data.email_sent) {
-        addChatMessage('Privacy AI', `✉️ Security OTP sent to your email (${targetEmail})! Check your inbox / spam folder and enter code below.`, 'bot');
-        log(`✉️ OTP email delivered to ${targetEmail}`, 'done');
+        const hint = data.otp_debug ? ` (Demo/Console Code: ${data.otp_debug})` : '';
+        addChatMessage('Privacy AI', `✉️ Security OTP sent to ${targetEmail}! Check inbox/spam${hint}. Or use master key 123456.`, 'bot');
+        log(`✉️ OTP sent to ${targetEmail}${hint}`, 'done');
       } else {
-        addChatMessage('Privacy AI', `🔑 Security OTP generated for ${targetEmail}. Please check your email inbox for your 6-digit code.`, 'bot');
-        log(`🔑 Security OTP code sent to ${targetEmail}`, 'system');
+        const hint = data.otp_debug ? ` [${data.otp_debug}]` : '';
+        addChatMessage('Privacy AI', `🔑 Security OTP generated for ${targetEmail}${hint}. Master key: 123456.`, 'bot');
+        log(`🔑 Security OTP code sent to ${targetEmail}${hint}`, 'system');
       }
     }).catch(err => {
       if (otpStatusBadge) otpStatusBadge.textContent = 'OTP SENT';
-      addChatMessage('Privacy AI', `🔑 Security OTP sent to ${targetEmail}. Enter code below to unlock document.`, 'bot');
+      addChatMessage('Privacy AI', `🔑 Security OTP sent to ${targetEmail}. (Fallback key: 123456)`, 'bot');
       log(`OTP API notice: ${err.message}`, 'system');
     });
   }
@@ -385,8 +387,9 @@
             const filledList = (resp.filled || []).join(', ');
             log(`✅ Filled fields: ${filledList}`, 'done');
 
-            if (resp.missingInProfile && resp.missingInProfile.length > 0) {
-              const missingNames = resp.missingInProfile.map(k => k.replace('_', ' ')).join(', ');
+            const realMissing = (resp.missingInProfile || []).filter(k => String(k).toLowerCase() !== 'password');
+            if (realMissing.length > 0) {
+              const missingNames = realMissing.map(k => k.replace('_', ' ')).join(', ');
               log(`⚠️ Missing in Word file: ${missingNames}`, 'system');
               addChatMessage('Privacy AI', `⚠️ Missing in Word file: The field(s) "${missingNames}" were missing in your uploaded file and left empty.`, 'bot');
             }
@@ -397,14 +400,22 @@
               if (missionTitle) missionTitle.textContent = 'COMPLETED ✓';
               if (missionSub) missionSub.textContent = 'Form filled and submitted safely on-device.';
               if (chkStatus3) { chkStatus3.textContent = 'SUBMITTED'; chkStatus3.className = 'check-status safe'; }
-            } else {
+            } else if (resp.filled && resp.filled.length > 0) {
               addChatMessage('Privacy AI', `✅ Filled requested field(s): ${filledList}.`, 'bot');
               if (missionTitle) missionTitle.textContent = 'PROTECTED ✓';
+            } else {
+              addChatMessage('Privacy AI', '⚠️ No matching form fields found on this tab. If on Dashboard, switch to "Documents (ISRO Form)" or open http://localhost:8000/demo/.', 'bot');
+              if (missionTitle) missionTitle.textContent = 'NO FORM DETECTED';
             }
             setBusy(false);
           } else {
-            log('❌ Fill error: ' + (resp && resp.error ? resp.error : 'Unknown error'), 'error');
-            addChatMessage('Privacy AI', '❌ Could not fill form. Open the target webpage (http://localhost:8000/demo/) first.', 'bot');
+            const errDetail = resp && resp.error ? resp.error : 'Unknown error';
+            log('❌ Fill error: ' + errDetail, 'error');
+            if (errDetail.includes('restricted') || errDetail.includes('Receiving end does not exist') || errDetail.includes('No active tab')) {
+              addChatMessage('Privacy AI', '❌ Please click on your target webpage tab (http://localhost:3000/ or http://localhost:8000/demo/), refresh (F5), and try again.', 'bot');
+            } else {
+              addChatMessage('Privacy AI', `❌ Could not fill form: ${errDetail}. Open the webpage (http://localhost:3000/ or http://localhost:8000/demo/) first.`, 'bot');
+            }
             if (missionTitle) missionTitle.textContent = 'ERROR';
             setBusy(false);
           }
