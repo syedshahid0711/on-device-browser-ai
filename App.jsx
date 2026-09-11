@@ -838,14 +838,10 @@ export default function App() {
                 </div>
 
                 {/* Word file status banner */}
-                {wordFileLoaded ? (
+                {wordFileLoaded && (
                   <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", color: "#34d399", borderRadius: "10px", padding: "10px 16px", marginBottom: "14px", fontWeight: "600", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px" }}>
                     ✅ Word file profile loaded — form populated from your document
                     <button type="button" onClick={loadAndApplyWordProfile} style={{ marginLeft: "auto", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.4)", color: "#34d399", borderRadius: "6px", padding: "3px 10px", cursor: "pointer", fontSize: "0.78rem", fontWeight: "700" }}>↻ Reload</button>
-                  </div>
-                ) : (
-                  <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245,158,11,0.4)", color: "#f59e0b", borderRadius: "10px", padding: "10px 16px", marginBottom: "14px", fontWeight: "600", fontSize: "0.85rem" }}>
-                    ⚠️ No Word file loaded — attach a .docx via the extension popup to auto-fill this form
                   </div>
                 )}
 
