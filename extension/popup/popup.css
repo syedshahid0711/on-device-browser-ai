@@ -15,13 +15,16 @@
   --font: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   min-width: 360px;
   max-width: 420px;
@@ -158,9 +161,23 @@ html, body {
   border: 1px solid rgba(11, 43, 76, 0.08);
 }
 
-.ring-3 { width: 110px; height: 110px; border-color: rgba(11, 43, 76, 0.06); }
-.ring-2 { width: 84px;  height: 84px;  border-color: rgba(11, 43, 76, 0.1); }
-.ring-1 { width: 60px;  height: 60px;  border-color: rgba(11, 43, 76, 0.15); }
+.ring-3 {
+  width: 110px;
+  height: 110px;
+  border-color: rgba(11, 43, 76, 0.06);
+}
+
+.ring-2 {
+  width: 84px;
+  height: 84px;
+  border-color: rgba(11, 43, 76, 0.1);
+}
+
+.ring-1 {
+  width: 60px;
+  height: 60px;
+  border-color: rgba(11, 43, 76, 0.15);
+}
 
 .check-badge {
   width: 42px;
@@ -210,7 +227,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .metric-item {
@@ -252,7 +269,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   transition: box-shadow 0.2s;
 }
 
@@ -865,9 +882,11 @@ input[type="file"] {
     padding: 14px;
     gap: 10px;
   }
+
   .app-header {
     padding: 12px 14px;
   }
+
   .mission-title {
     font-size: 1.4rem;
   }

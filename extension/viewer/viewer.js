@@ -150,16 +150,20 @@
   // Event Listeners
   if (backToFormBtn) {
     backToFormBtn.addEventListener('click', () => {
-      chrome.tabs.query({}, (tabs) => {
-        const formTab = tabs.find(t => t.url && (t.url.includes('/demo') || (t.url.startsWith('http') && !t.url.includes('chrome-extension'))));
-        if (formTab) {
-          chrome.tabs.update(formTab.id, { active: true });
-          if (formTab.windowId) {
-            chrome.windows.update(formTab.windowId, { focused: true });
+      chrome.storage.local.get(['pba_last_form_url'], (res) => {
+        const savedUrl = res.pba_last_form_url;
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs && tabs[0] && tabs[0].id) {
+            const targetUrl = (savedUrl && !savedUrl.includes('chrome-extension'))
+              ? savedUrl
+              : 'http://localhost:8000/demo/';
+            chrome.tabs.update(tabs[0].id, { url: targetUrl });
+          } else if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            window.location.href = savedUrl || 'http://localhost:8000/demo/';
           }
-        } else {
-          chrome.tabs.create({ url: 'http://localhost:8000/demo/' });
-        }
+        });
       });
     });
   }

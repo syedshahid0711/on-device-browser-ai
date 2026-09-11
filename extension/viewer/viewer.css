@@ -19,7 +19,9 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -189,9 +191,17 @@ body {
   font-family: var(--font-mono);
 }
 
-.stat-val.text-amber { color: var(--amber); }
-.stat-val.text-green { color: var(--green); }
-.stat-val.text-blue  { color: var(--cyan); }
+.stat-val.text-amber {
+  color: var(--amber);
+}
+
+.stat-val.text-green {
+  color: var(--green);
+}
+
+.stat-val.text-blue {
+  color: var(--cyan);
+}
 
 .stat-sub {
   font-size: 0.75rem;
@@ -232,9 +242,20 @@ body {
   letter-spacing: 0.06em;
 }
 
-.badge-cyan { background: var(--cyan-light); color: var(--cyan); }
-.badge-green { background: var(--green-light); color: var(--green); }
-.badge-purple { background: #f3e8ff; color: #7e22ce; }
+.badge-cyan {
+  background: var(--cyan-light);
+  color: var(--cyan);
+}
+
+.badge-green {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.badge-purple {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
 
 .section-desc {
   font-size: 0.8rem;

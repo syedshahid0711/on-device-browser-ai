@@ -385,6 +385,12 @@
             const filledList = (resp.filled || []).join(', ');
             log(`✅ Filled fields: ${filledList}`, 'done');
 
+            if (resp.missingInProfile && resp.missingInProfile.length > 0) {
+              const missingNames = resp.missingInProfile.map(k => k.replace('_', ' ')).join(', ');
+              log(`⚠️ Missing in Word file: ${missingNames}`, 'system');
+              addChatMessage('Privacy AI', `⚠️ Missing in Word file: The field(s) "${missingNames}" were missing in your uploaded file and left empty.`, 'bot');
+            }
+
             if (resp.submitted) {
               log(`🎉 Form submitted automatically!`, 'done');
               addChatMessage('Privacy AI', `🎉 Form filled and submitted automatically! Filled: ${filledList}.`, 'bot');
@@ -392,7 +398,7 @@
               if (missionSub) missionSub.textContent = 'Form filled and submitted safely on-device.';
               if (chkStatus3) { chkStatus3.textContent = 'SUBMITTED'; chkStatus3.className = 'check-status safe'; }
             } else {
-              addChatMessage('Privacy AI', `✅ Successfully filled ONLY requested field(s): ${filledList}.`, 'bot');
+              addChatMessage('Privacy AI', `✅ Filled requested field(s): ${filledList}.`, 'bot');
               if (missionTitle) missionTitle.textContent = 'PROTECTED ✓';
             }
             setBusy(false);
@@ -635,8 +641,19 @@
 
   function openDataInspectorPage() {
     const viewerUrl = chrome.runtime.getURL('viewer/viewer.html');
-    chrome.tabs.create({ url: viewerUrl });
-    addChatMessage('Privacy AI', '🔍 Opened Data Inspector Page in a new tab.', 'bot');
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].id) {
+        const currentUrl = tabs[0].url || '';
+        // Save current webpage URL if it's not already the viewer
+        if (!currentUrl.includes('viewer/viewer.html')) {
+          chrome.storage.local.set({ pba_last_form_url: currentUrl });
+        }
+        chrome.tabs.update(tabs[0].id, { url: viewerUrl });
+      } else {
+        chrome.tabs.create({ url: viewerUrl });
+      }
+    });
+    addChatMessage('Privacy AI', '🔍 Opened Data Inspector in this tab.', 'bot');
   }
 
   if (openInspectorChip) {
