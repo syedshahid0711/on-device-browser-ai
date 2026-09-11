@@ -63,6 +63,30 @@ async function checkBackend() {
   }
 }
 
+// ── Offscreen Document Management ──────────────────────────────
+let creatingOffscreen;
+async function setupOffscreenDocument() {
+  const offscreenUrl = chrome.runtime.getURL('offscreen/offscreen.html');
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+    documentUrls: [offscreenUrl]
+  });
+
+  if (existingContexts.length > 0) return;
+
+  if (creatingOffscreen) {
+    await creatingOffscreen;
+  } else {
+    creatingOffscreen = chrome.offscreen.createDocument({
+      url: 'offscreen/offscreen.html',
+      reasons: ['DOM_SCRAPING'],
+      justification: 'Running WebGPU Machine Learning model and canvas redaction'
+    });
+    await creatingOffscreen;
+    creatingOffscreen = null;
+  }
+}
+
 // ── Get the active tab ───────────────────────────────────────
 async function getActiveTab() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -80,13 +104,14 @@ async function ensureContentScript(tabId) {
         'privacy/pii-detector.js',
         'storage/profile-store.js',
         'automation/action-executor.js',
+        'automation/direct-filler.js',
         'content/content.js'
       ]
     });
     await chrome.scripting.insertCSS({
       target: { tabId },
       files: ['content/content.css']
-    }).catch(() => {});
+    }).catch(() => { });
   } catch (e) {
     log('WARN', 'Script injection failed or restricted tab:', e.message);
   }
@@ -102,7 +127,7 @@ async function sendToContent(tabId, message) {
       try {
         return await chrome.tabs.sendMessage(tabId, message);
       } catch (err2) {
-        throw new Error('Please refresh (F5) the webpage (http://localhost:5500) so the extension agent can connect to it.');
+        throw new Error('Please refresh (F5) the webpage (http://localhost:8000/demo/) so the extension agent can connect to it.');
       }
     }
     throw err;
@@ -124,11 +149,11 @@ async function analyzeWithBackend(task, pageContext) {
   const payload = {
     task,
     page_context: {
-      url:       pageContext.url,
-      title:     pageContext.title,
+      url: pageContext.url,
+      title: pageContext.title,
       page_type: pageContext.page_type,
-      fields:    safeFields,
-      summary:   pageContext.summary,
+      fields: safeFields,
+      summary: pageContext.summary,
     },
   };
 
@@ -206,15 +231,14 @@ async function runAgentTask(task, tabId, sendUpdate) {
 
     if (!execResp.ok) throw new Error('Execution failed: ' + execResp.error);
 
-    // 4. Confirm and submit (if plan includes a submit action)
-    const hasSubmit = aiResponse.actions.some(a => a.action === 'click' && /submit/i.test(a.target_id));
+    // 4. Auto-submit the form (agent already has user consent from task instruction)
+    const hasSubmit = aiResponse.actions.some(a =>
+      a.action === 'click' && a.target_id &&
+      /submit|btn|register|button/i.test(a.target_id)
+    );
     if (hasSubmit) {
-      const confirmResp = await sendToContent(tabId, { type: 'CONFIRM_AND_SUBMIT' });
-      if (confirmResp.cancelled) {
-        sendUpdate({ stage: 'cancelled', message: 'User cancelled submission.' });
-        agentState.status = 'idle';
-        return;
-      }
+      // Auto-confirm — no blocking dialog for the agent
+      await sendToContent(tabId, { type: 'CONFIRM_AND_SUBMIT' });
     }
 
     // Done
@@ -251,6 +275,127 @@ async function runAgentTask(task, tabId, sendUpdate) {
   }
 }
 
+// ── VLM Loop ─────────────────────────────────────────────────
+async function captureAndRedact(tabId) {
+  const rectResp = await sendToContent(tabId, { type: 'GET_DOM_RECTS' });
+  const domRects = rectResp.ok ? rectResp.domRects : [];
+
+  const tab = await chrome.tabs.get(tabId);
+  const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 50 });
+
+  await setupOffscreenDocument();
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({
+      type: 'DETECT_VISUAL_PII',
+      target: 'offscreen',
+      imageSource: dataUrl,
+      domRects: domRects
+    }, resp => {
+      if (!resp || !resp.ok) reject(new Error('Redaction failed'));
+      else resolve(resp.data.redactedImage);
+    });
+  });
+}
+
+async function runVlmLoop(tabId, task) {
+  let status = 'in_progress';
+  let previousErrors = [];
+  let completedSelectors = [];   // track what's already been filled
+  let iterations = 0;
+  const MAX_ITERATIONS = 15;
+
+  chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'scanning', message: 'VLM Agent loop started...' }).catch(() => { });
+
+  while (status === 'in_progress' && iterations < MAX_ITERATIONS) {
+    iterations++;
+    try {
+      chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'scanning', message: `Step ${iterations}: Capturing visual context...` }).catch(() => { });
+      const redactedImage = await captureAndRedact(tabId);
+
+      // Also fetch structured DOM field data so Ollama (text-only model) can
+      // reason about the form without needing true vision capabilities.
+      let pageFields = [];
+      try {
+        const ctxResp = await sendToContent(tabId, { type: 'GET_PAGE_CONTEXT' });
+        if (ctxResp && ctxResp.ok && ctxResp.context) {
+          pageFields = ctxResp.context.fields || [];
+        }
+      } catch (e) {
+        log('WARN', 'Could not fetch page context for VLM:', e.message);
+      }
+
+      chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'reasoning', message: `Step ${iterations}: AI processing...` }).catch(() => { });
+
+      const fetchResp = await fetchWithTimeout(
+        `${CONFIG.BACKEND_URL}/api/vlm_analyze`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task,
+            image_base64: redactedImage,
+            previous_errors: previousErrors.length > 0 ? previousErrors : null,
+            page_fields: pageFields,
+            completed_selectors: completedSelectors,
+          })
+        }
+      );
+
+      if (!fetchResp.ok) {
+        throw new Error(`VLM API error: ${await fetchResp.text()}`);
+      }
+
+      const vlmResult = await fetchResp.json();
+      status = vlmResult.status;
+
+      chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'reasoning', message: `Reasoning: ${vlmResult.reasoning || status}` }).catch(() => { });
+
+      if (status === 'complete') {
+        chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'done', message: 'Task completed successfully!' }).catch(() => { });
+        return { ok: true };
+      }
+
+      if (status === 'error') {
+        throw new Error(vlmResult.reasoning || 'VLM returned error status');
+      }
+
+      if (status === 'in_progress' && vlmResult.action) {
+        const selector = vlmResult.target_css_selector;
+        chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'executing', message: `Executing action: ${vlmResult.action} on ${selector}` }).catch(() => { });
+
+        const execResp = await sendToContent(tabId, {
+          type: 'EXECUTE_VLM_PLAN',
+          action: vlmResult
+        });
+
+        if (execResp.ok && execResp.result && execResp.result.success) {
+          previousErrors = [];
+          // Mark this selector as done so the VLM won't repeat it
+          if (selector && !completedSelectors.includes(selector)) {
+            completedSelectors.push(selector);
+          }
+        } else {
+          const errMsg = execResp.error || 'Action failed';
+          previousErrors.push(errMsg);
+          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'scanning', message: `Retrying due to error: ${errMsg}` }).catch(() => { });
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 800));
+
+    } catch (err) {
+      log('ERROR', 'VLM loop iteration failed:', err);
+      chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: err.message }).catch(() => { });
+      return { ok: false, error: err.message };
+    }
+  }
+
+  if (iterations >= MAX_ITERATIONS) {
+    chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'Max iterations reached without completion.' }).catch(() => { });
+    return { ok: false, error: 'Max iterations reached' };
+  }
+}
+
 // ── Message Router ───────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   log('DEBUG', 'BG received:', msg.type);
@@ -261,10 +406,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({
         ok: true,
         state: {
-          status:           agentState.status,
-          piiSummary:       agentState.piiSummary,
+          status: agentState.status,
+          piiSummary: agentState.piiSummary,
           backendConnected: agentState.backendConnected,
-          metrics:          agentState.metrics,
+          metrics: agentState.metrics,
         },
       });
       break;
@@ -295,15 +440,81 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // For simplicity here, we return immediately and send updates via chrome.runtime.sendMessage
       getActiveTab().then(tab => {
         if (!tab || !tab.id) {
-          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'No active tab found. Please click on the webpage.' }).catch(() => {});
+          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'No active tab found. Please click on the webpage.' }).catch(() => { });
           return;
         }
         runAgentTask(task.trim(), tab.id, (update) => {
           // Broadcast update to any listening popup
-          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', ...update }).catch(() => {});
+          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', ...update }).catch(() => { });
         });
       }).catch(err => {
-        chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'Tab error: ' + err.message }).catch(() => {});
+        chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'Tab error: ' + err.message }).catch(() => { });
+      });
+
+      sendResponse({ ok: true, message: 'Task started' });
+      break;
+    }
+
+    case 'RUN_DIRECT_FILL': {
+      // On-device fill — no Ollama needed.
+      // Profile data comes directly in the message payload from popup.js.
+      const { profile, targetKeys, autoSubmit } = msg;
+      if (!profile || Object.keys(profile).length === 0) {
+        sendResponse({ ok: false, error: 'No profile data in message' });
+        break;
+      }
+
+      getActiveTab().then(async tab => {
+        if (!tab || !tab.id) {
+          sendResponse({ ok: false, error: 'No active tab found. Click on the webpage first.' });
+          return;
+        }
+
+        // Ensure all content scripts (including direct-filler.js) are injected
+        await ensureContentScript(tab.id);
+
+        // Small delay to let scripts initialise
+        await new Promise(r => setTimeout(r, 300));
+
+        try {
+          const fillResp = await chrome.tabs.sendMessage(tab.id, {
+            type: 'DIRECT_FILL',
+            profile,
+            targetKeys,
+            autoSubmit
+          });
+          sendResponse(fillResp);
+        } catch (err) {
+          sendResponse({ ok: false, error: 'Content script error: ' + err.message });
+        }
+      }).catch(err => {
+        sendResponse({ ok: false, error: 'Tab error: ' + err.message });
+      });
+
+      return true; // async
+    }
+
+    case 'RUN_VLM_TASK': {
+      const { task } = msg;
+      if (!task) {
+        sendResponse({ ok: false, error: 'Task is required' });
+        break;
+      }
+
+      getActiveTab().then(tab => {
+        if (!tab || !tab.id) {
+          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'No active tab found. Please click on the webpage.' }).catch(() => { });
+          return;
+        }
+        // Route through the proven Ollama + profile path so the Word doc
+        // data (stored in chrome.storage.local) is used to fill the form.
+        // This also prevents the infinite-loop that the old VLM screenshot
+        // loop produced when the mock always returned "in_progress".
+        runAgentTask(task.trim(), tab.id, (update) => {
+          chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', ...update }).catch(() => { });
+        });
+      }).catch(err => {
+        chrome.runtime.sendMessage({ type: 'AGENT_UPDATE', stage: 'error', message: 'Tab error: ' + err.message }).catch(() => { });
       });
 
       sendResponse({ ok: true, message: 'Task started' });
@@ -324,6 +535,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return true;
     }
 
+    case 'DETECT_VISUAL_PII': {
+      setupOffscreenDocument().then(() => {
+        chrome.runtime.sendMessage({
+          type: 'DETECT_VISUAL_PII',
+          target: 'offscreen',
+          imageSource: msg.imageSource,
+          domRects: msg.domRects
+        }, (response) => {
+          sendResponse(response);
+        });
+      }).catch(err => {
+        log('ERROR', 'Offscreen setup failed:', err);
+        sendResponse({ ok: false, error: 'Offscreen setup failed' });
+      });
+      return true;
+    }
+
     case 'RESET_STATE':
       agentState.status = 'idle';
       agentState.currentTask = null;
@@ -340,10 +568,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener(() => {
   log('INFO', 'Privacy Browser Agent installed. Version:', CONFIG.VERSION);
   checkBackend();
+  setupOffscreenDocument();
 });
 
 // Periodic backend health check
 setInterval(checkBackend, 30000);
 checkBackend();
 
+
 log('INFO', 'background.js loaded');
+

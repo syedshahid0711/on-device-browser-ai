@@ -72,7 +72,7 @@
   async function getSanitizedProfile() {
     const profile = await getProfile();
     const sanitized = {};
-    const SENSITIVE_KEYS = ['name','email','phone','dob','address','employee_id','password'];
+    const SENSITIVE_KEYS = ['name', 'email', 'phone', 'dob', 'address', 'employee_id', 'password'];
 
     for (const [k, v] of Object.entries(profile)) {
       if (SENSITIVE_KEYS.includes(k)) {

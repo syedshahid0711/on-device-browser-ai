@@ -88,12 +88,21 @@
       confidence: 0.82,
     },
     {
+      category: 'employee_id',
+      sensitive: true,
+      inputTypes: ['text'],
+      keywords: ['employee_id', 'employeeid', 'emp_id', 'staff_id', 'staffid', 'worker_id'],
+      autocompleteValues: [],
+      valuePattern: /^[A-Z]{0,5}\d{4,10}$/i,
+      confidence: 0.90,
+    },
+    {
       category: 'student_id',
       sensitive: true,
       inputTypes: ['text'],
-      keywords: ['student_id', 'studentid', 'enrollment', 'roll', 'roll_no', 'registration', 'reg_no', 'stu'],
+      keywords: ['student_id', 'studentid', 'enrollment', 'roll', 'roll_no', 'reg_no', 'stu'],
       autocompleteValues: [],
-      valuePattern: /^[A-Z]{0,5}\d{4,10}$/i,
+      valuePattern: null,
       confidence: 0.88,
     },
     {
@@ -325,11 +334,51 @@
     return scanResult;
   }
 
+  /**
+   * Detect visual PII using the background WebGPU offscreen document.
+   * @param {string} imageSource - Base64 data URL of the screenshot.
+   * @returns {Promise<{ redactedImage: string, boundingBoxes: Array }>}
+   */
+  async function detectVisualPII(imageSource) {
+    // Gather coordinates for sensitive DOM elements
+    const domRects = [];
+    const pageScan = scanPage();
+    
+    pageScan.fields.forEach(field => {
+      if (field.sensitive && field._element) {
+        const rect = field._element.getBoundingClientRect();
+        domRects.push({
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height
+        });
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({
+        type: 'DETECT_VISUAL_PII',
+        imageSource: imageSource,
+        domRects: domRects
+      }, response => {
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+        if (!response || !response.ok) {
+          return reject(new Error(response ? response.error : 'Unknown error during visual PII detection'));
+        }
+        resolve(response.data);
+      });
+    });
+  }
+
   window.__piiDetector = {
     analyze,
     scanPage,
     getSanitizedPageContext,
     augmentWithVisualContext,
+    detectVisualPII,
   };
 
   window.__agentLogger && window.__agentLogger.debug('pii-detector.js loaded');

@@ -4,8 +4,8 @@ POST /api/analyze — core endpoint: receive sanitized page context → return a
 """
 
 from fastapi import APIRouter, HTTPException
-from app.models.schemas import AnalyzeRequest, AnalyzeResponse
-from app.services import llm_service
+from app.models.schemas import AnalyzeRequest, AnalyzeResponse, VLMAnalyzeRequest, VLMAnalyzeResponse
+from app.services import llm_service, vlm_agent
 from app.services.action_validator import validate_plan
 from app.utils.logger import get_logger
 import time
@@ -53,4 +53,24 @@ async def analyze(req: AnalyzeRequest):
 
     response.actions = valid_actions
     log.info("Returning %d validated actions", len(valid_actions))
+    return response
+
+
+@router.post("/vlm_analyze", response_model=VLMAnalyzeResponse)
+async def vlm_analyze(req: VLMAnalyzeRequest):
+    log.info("POST /vlm_analyze — task=%r, image_length=%d", req.task[:60], len(req.image_base64))
+    
+    t0 = time.time()
+    try:
+        response = await vlm_agent.analyze_vision(req)
+    except RuntimeError as e:
+        log.error("VLM error: %s", e)
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        log.error("Unexpected error in VLM: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during VLM analysis")
+        
+    elapsed_ms = round((time.time() - t0) * 1000)
+    log.info("VLM responded in %dms — status: %s", elapsed_ms, response.status)
+    
     return response

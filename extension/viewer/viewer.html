@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Vision AI — Data & Field Mapping Inspector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="viewer.css" />
+</head>
+<body>
+  <div class="inspector-container">
+
+    <!-- Top Navigation Header -->
+    <header class="inspector-header">
+      <div class="header-left">
+        <div class="logo-box">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.4)" />
+            <polygon points="12,4 15,12 12,20 9,12" fill="#38bdf8" />
+            <polygon points="4,12 12,15 20,12 12,9" fill="#38bdf8" />
+            <circle cx="12" cy="12" r="2.5" fill="#ffffff" />
+          </svg>
+        </div>
+        <div class="header-info">
+          <h1>PRIVACY VISION AI <span class="page-tag">DATA INSPECTOR</span></h1>
+          <p>Transparent view of Word file profile extraction and AI webpage field mappings</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="back-to-form-btn" class="btn btn-primary" title="Go back to target webpage form">🚀 BACK TO FORM</button>
+        <button id="refresh-data-btn" class="btn btn-outline" title="Refresh Profile Data">↻ Refresh</button>
+        <button id="copy-json-btn" class="btn btn-outline" title="Copy JSON Profile">📋 Copy JSON</button>
+        <button id="clear-profile-btn" class="btn btn-danger" title="Clear Extracted Profile">🗑 Clear Profile</button>
+      </div>
+    </header>
+
+    <main class="inspector-body">
+      
+      <!-- Stats Row -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">EXTRACTED PROFILE FIELDS</span>
+          <div class="stat-val" id="stat-fields-count">0</div>
+          <span class="stat-sub" id="stat-doc-name">Source: Attached .docx document</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-label">PII SENSITIVE FIELDS</span>
+          <div class="stat-val text-amber" id="stat-pii-count">0</div>
+          <span class="stat-sub">Protected by on-device engine</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-label">TARGET WEBPAGE COMPATIBILITY</span>
+          <div class="stat-val text-green" id="stat-mapped-count">100%</div>
+          <span class="stat-sub">Ready for auto-fill injection</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-label">DATA SECURITY MODE</span>
+          <div class="stat-val text-blue">LOCAL MEMORY</div>
+          <span class="stat-sub">Zero network payload / server leaks</span>
+        </div>
+      </section>
+
+      <!-- Section 1: Extracted Word Document Profile Fields -->
+      <section class="panel-section">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>📄 Extracted Word Profile Data</h2>
+            <span class="badge badge-cyan">ON-DEVICE PARSED</span>
+          </div>
+          <p class="section-desc">These are the exact profile fields extracted from your Word document (.docx) by Privacy Vision AI.</p>
+        </div>
+
+        <div id="fields-grid" class="fields-grid">
+          <div class="empty-state">
+            <div class="empty-icon">📂</div>
+            <h3>No Profile Data Loaded Yet</h3>
+            <p>Upload a Word document (.docx) in the extension popup to view extracted profile data here.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: AI Webpage Field Mapping Execution Log -->
+      <section class="panel-section">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>🤖 AI Form Field Execution Map</h2>
+            <span class="badge badge-green">LIVE MAPPING</span>
+          </div>
+          <p class="section-desc">Shows how the AI matches extracted Word profile keys to HTML input elements on active webpage forms.</p>
+        </div>
+
+        <div class="table-container">
+          <table class="mapping-table">
+            <thead>
+              <tr>
+                <th>Profile Key</th>
+                <th>Field Label</th>
+                <th>Target Webpage HTML Selector</th>
+                <th>Data Injected</th>
+                <th>Action Type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="mapping-table-body">
+              <tr>
+                <td colspan="6" class="td-empty">Load a profile and open a webpage form to view field mappings.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 3: Raw Profile JSON Inspector -->
+      <section class="panel-section">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>{ } Raw Extracted Profile (JSON)</h2>
+            <span class="badge badge-purple">STRUCTURED DATA</span>
+          </div>
+          <p class="section-desc">Raw JSON representation stored safely in Chrome local storage (`pba_user_profile`).</p>
+        </div>
+
+        <div class="json-container">
+          <pre id="json-display"><code>// Loading profile JSON...</code></pre>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="inspector-footer">
+      <span>PRIVACY VISION AI &bull; ON-DEVICE DATA INSPECTOR</span>
+      <span>Confidential &bull; Never Shared Externally</span>
+    </footer>
+
+  </div>
+
+  <script src="viewer.js"></script>
+</body>
+</html>

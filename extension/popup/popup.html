@@ -3,253 +3,258 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privacy Browser Agent</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <title>Privacy Vision AI</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+  <div class="app-container">
 
-  <!-- ===============================
-       DASHBOARD VIEW (Default)
-       =============================== -->
-  <div id="view-dashboard" class="view active">
-    
-    <!-- Top Header -->
-    <header class="dash-header">
-      <div class="dash-logo">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
         <div class="logo-circle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="logo-svg">
-            <circle cx="12" cy="12" r="11" stroke="rgba(255,255,255,0.4)"/>
-            <path d="M12 4L14 10L20 12L14 14L12 20L10 14L4 12L10 10L12 4Z" fill="white" stroke="none"/>
-            <path d="M4 12Q12 4 20 12" stroke="rgba(255,255,255,0.3)"/>
-            <path d="M4 12Q12 20 20 12" stroke="rgba(255,255,255,0.3)"/>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.4)" />
+            <polygon points="12,3 15,12 12,21 9,12" fill="#38bdf8" />
+            <polygon points="3,12 12,15 21,12 12,9" fill="#38bdf8" />
+            <circle cx="12" cy="12" r="2" fill="#ffffff" />
           </svg>
         </div>
-        <div class="logo-text">
-          <div class="logo-title">PRIVACY VISION</div>
-          <div class="logo-sub">ON-DEVICE INTELLIGENCE</div>
+        <div class="header-titles">
+          <h1 class="brand-title">PRIVACY VISION</h1>
+          <span class="brand-subtitle">ON-DEVICE INTELLIGENCE</span>
         </div>
       </div>
-      <div class="dash-status">
-        <span class="status-dot" id="dash-backend-dot"></span>
-        <span class="status-text" id="dash-backend-text">ONLINE</span>
+      <div class="status-pill online">
+        <span class="dot"></span>
+        <span class="status-text">ONLINE</span>
       </div>
     </header>
-    
-    <div class="header-line">
-      <div class="line-orange"></div>
-      <div class="line-green"></div>
+    <div class="accent-bar">
+      <div class="bar-left"></div>
+      <div class="bar-right"></div>
     </div>
 
-    <!-- Rings Graphic -->
-    <div class="rings-wrapper">
-      <div class="ring ring-4">
-        <div class="ring ring-3">
-          <div class="ring ring-2">
-            <div class="ring ring-1">
-              <div class="center-circle">
-                <svg viewBox="0 0 24 24" class="check-icon"><path d="M19 7L10 16l-4-4" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </div>
+    <main class="main-content">
+      <!-- Radar Circle Hero Section -->
+      <div class="hero-section">
+        <div class="radar-circles">
+          <div class="ring ring-3"></div>
+          <div class="ring ring-2"></div>
+          <div class="ring ring-1"></div>
+          <div class="check-badge" id="hero-check-badge">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ffffff" stroke-width="3.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <span class="mission-label">MISSION STATUS</span>
+        <h2 class="mission-title" id="mission-title">PROTECTED</h2>
+        <p class="mission-sub" id="mission-sub">Your visual context is being processed locally.</p>
+      </div>
+
+      <!-- Metrics Row -->
+      <div class="metrics-card">
+        <div class="metric-item">
+          <span class="metric-label">LOCAL INFERENCE</span>
+          <div class="metric-val"><span id="inference-ms">42</span><span class="metric-unit">ms</span></div>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+          <span class="metric-label">FIELDS DETECTED</span>
+          <div class="metric-val" id="pii-count">03</div>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+          <span class="metric-label">DATA SHARED</span>
+          <div class="metric-val highlight-zero" id="data-shared">0</div>
+        </div>
+      </div>
+
+      <!-- Current Target Card -->
+      <div class="card target-card">
+        <div class="card-header">
+          <span class="card-tag">CURRENT TARGET</span>
+          <span class="live-badge">LIVE</span>
+        </div>
+        <h3 class="target-title" id="target-title">Browser Environment</h3>
+
+        <div class="checklist">
+          <div class="check-item">
+            <div class="check-left">
+              <span class="check-icon">✓</span>
+              <span>Visual context captured</span>
             </div>
+            <span class="check-status ready" id="chk-status-1">READY</span>
+          </div>
+          <div class="check-item">
+            <div class="check-left">
+              <span class="check-icon">✓</span>
+              <span>Privacy scan complete</span>
+            </div>
+            <span class="check-status safe" id="chk-status-2">SAFE</span>
+          </div>
+          <div class="check-item">
+            <div class="check-left">
+              <span class="check-icon">✓</span>
+              <span>Server payload sanitized</span>
+            </div>
+            <span class="check-status secure" id="chk-status-3">SECURE</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Mission Status -->
-    <div class="mission-status">
-      <div class="ms-label">MISSION STATUS</div>
-      <div class="ms-title">PROTECTED</div>
-      <div class="ms-desc">Your visual context is being processed locally.</div>
-    </div>
-
-    <!-- Metrics -->
-    <div class="metrics-card">
-      <div class="m-box">
-        <div class="m-label">LOCAL INFERENCE</div>
-        <div class="m-val"><span id="dash-m-exec">--</span><span class="m-unit">ms</span></div>
-      </div>
-      <div class="m-divider"></div>
-      <div class="m-box">
-        <div class="m-label">PII DETECTED</div>
-        <div class="m-val" id="dash-pii">00</div>
-      </div>
-      <div class="m-divider"></div>
-      <div class="m-box">
-        <div class="m-label">DATA SHARED</div>
-        <div class="m-val">0</div>
-      </div>
-    </div>
-
-    <!-- Target Info -->
-    <div class="target-card">
-      <div class="t-header">
-        <div class="t-title-area">
-          <div class="t-label">CURRENT TARGET</div>
-          <div class="t-name">Browser Environment</div>
+      <!-- Prominent Data Inspector Banner Card -->
+      <div class="card inspector-card">
+        <div class="card-header">
+          <span class="card-tag">🔍 AI DATA &amp; TRANSFER INSPECTOR</span>
+          <span class="live-badge">TRANSPARENT</span>
         </div>
-        <div class="t-badge">LIVE</div>
+        <p class="inspector-card-desc">
+          View full data extracted from your Word document &amp; real-time form field transfer logs.
+        </p>
+        <button id="open-inspector-main-btn" class="main-inspector-btn">
+          🔍 OPEN DATA INSPECTOR PAGE ➔
+        </button>
       </div>
-      <div class="t-list">
-        <div class="t-item">
-          <div class="t-icon">✓</div>
-          <div class="t-text">Visual context captured</div>
-          <div class="t-status status-ready">READY</div>
+
+      <!-- Word File Picker & Recipient Email Card -->
+      <div class="card file-card">
+        <div class="card-header">
+          <span class="card-tag">PROFILE DATA SOURCE (.DOCX)</span>
+          <span class="file-status-badge" id="file-status-badge">SELECT FILE</span>
         </div>
-        <div class="t-item">
-          <div class="t-icon">✓</div>
-          <div class="t-text">Privacy scan complete</div>
-          <div class="t-status status-safe">SAFE</div>
+
+        <div class="email-input-box">
+          <label for="target-email-input" class="email-label">
+            <span>✉️ Recipient Email for OTP Verification:</span>
+          </label>
+          <input type="email" id="target-email-input" class="email-input" placeholder="e.g. user@gmail.com" value="syedshahid0711@gmail.com" autocomplete="email" />
         </div>
-        <div class="t-item">
-          <div class="t-icon">✓</div>
-          <div class="t-text">Server payload sanitized</div>
-          <div class="t-status status-secure">SECURE</div>
-        </div>
+
+        <label class="file-drop-zone" for="p-import-file">
+          <div class="drop-icon-box">📄</div>
+          <div class="drop-info">
+            <span class="drop-title" id="file-name-display">Choose Word Document…</span>
+            <span class="drop-sub" id="file-sub-display">Click to load .docx profile data</span>
+          </div>
+          <input type="file" id="p-import-file" accept=".docx" />
+        </label>
       </div>
-    </div>
 
-    <!-- Shield Box -->
-    <div class="shield-card">
-      <div class="shield-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </div>
-      <div class="shield-info">
-        <div class="s-label">PRIVACY SHIELD</div>
-        <div class="s-title">ACTIVE</div>
-        <div class="s-desc">Sensitive information remains on-device.</div>
-      </div>
-    </div>
-
-    <!-- Action Button -->
-    <button id="btn-open-console" class="dash-btn">
-      OPEN MISSION CONSOLE <span class="arrow">→</span>
-    </button>
-
-    <div class="dash-footer">
-      PRIVACY VISION AI &nbsp;&bull;&nbsp; v1.0.0
-    </div>
-  </div>
-
-
-  <!-- ===============================
-       CONSOLE VIEW (Interactive)
-       =============================== -->
-  <div id="view-console" class="view">
-    
-    <div class="console-top">
-      <button id="btn-back-dash" class="back-btn">← Back to Dashboard</button>
-      <div class="console-title">Mission Console</div>
-    </div>
-    
-    <!-- ── Tab Navigation ── -->
-    <nav class="tab-nav" role="tablist" aria-label="Agent sections">
-      <button class="tab-btn active" id="tab-agent"     role="tab" aria-selected="true"  data-tab="agent">🤖 Agent</button>
-      <button class="tab-btn"        id="tab-dashboard" role="tab" aria-selected="false" data-tab="dashboard">🛡️ Privacy</button>
-      <button class="tab-btn"        id="tab-settings"  role="tab" aria-selected="false" data-tab="settings">⚙️ Settings</button>
-    </nav>
-
-    <!-- TAB 1: AGENT -->
-    <section class="tab-panel active" id="panel-agent" role="tabpanel" aria-labelledby="tab-agent">
-      
-      <!-- Status cards -->
-      <div class="status-grid">
-        <div class="status-card" id="card-page">
-          <span class="status-label">Page</span>
-          <span class="status-value" id="page-title">—</span>
+      <!-- Integrated Sleek OTP Card -->
+      <div class="card otp-card" id="otp-card" style="display:none">
+        <div class="card-header">
+          <div class="otp-tag-wrap">
+            <span class="otp-lock-icon">🔒</span>
+            <span class="card-tag otp-tag">SECURITY CODE VERIFICATION</span>
+          </div>
+          <span class="otp-status-badge" id="otp-status-badge">SENT</span>
         </div>
-        <div class="status-card" id="card-pii">
-          <span class="status-label">PII Detected</span>
-          <span class="status-value status-sensitive" id="pii-count">—</span>
+        <p class="otp-desc" id="otp-desc">
+          An OTP code has been sent to <strong id="otp-target-email-display">syedshahid0711@gmail.com</strong>
+        </p>
+        
+        <div class="otp-input-group">
+          <input type="text" id="otp-input" maxlength="6" placeholder="Enter 6-digit OTP" autocomplete="off" />
+          <button id="verify-otp-btn" class="verify-btn">UNLOCK ➔</button>
         </div>
-        <div class="status-card" id="card-protected">
-          <span class="status-label">Protected</span>
-          <span class="status-value status-safe" id="pii-protected">—</span>
-        </div>
-        <div class="status-card" id="card-backend">
-          <span class="status-label">AI Server</span>
-          <span class="status-value" id="backend-status">Checking…</span>
+
+        <div class="otp-footer-row">
+          <button id="resend-otp-btn" class="resend-link-btn" title="Resend OTP Email">Resend OTP Email</button>
+          <span class="otp-dev-inline">Dev Bypass: <strong>123456</strong></span>
         </div>
       </div>
 
-      <button class="btn btn-outline btn-sm w-full" id="scan-btn" style="margin-bottom: 1rem;">🔍 Scan Page</button>
-
-      <div class="import-section" style="margin-bottom: 1rem; padding: 1rem; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);">
-        <label class="input-label" for="p-import-file">Import from Word (.docx)</label>
-        <input type="file" id="p-import-file" accept=".docx" style="display: block; margin-bottom: 0.5rem; width: 100%; font-size: 0.85rem;" />
-        <button type="button" class="btn btn-outline btn-sm w-full" id="import-word-btn">📄 Extract Profile</button>
-        <div id="import-status" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); text-align: center;"></div>
-      </div>
-
-      <div class="task-section">
-        <label class="input-label" for="task-input">What should the agent do?</label>
-        <div class="task-input-wrapper">
-          <textarea id="task-input" class="task-textarea" placeholder="e.g. Fill my registration form and submit it" rows="3"></textarea>
+      <!-- Interactive AI Agent Chatbot Card -->
+      <div class="card chat-card">
+        <div class="card-header">
+          <span class="card-tag">🤖 AI AGENT CHATBOT</span>
+          <span class="live-badge interactive">INTERACTIVE</span>
         </div>
-        <p class="input-hint" id="task-hint">Private data stays on your device.</p>
-      </div>
-
-      <button class="btn btn-primary btn-lg w-full" id="run-btn" disabled>
-        <span id="run-btn-text">Start Agent</span>
-      </button>
-
-      <!-- Progress log -->
-      <div class="progress-section" id="progress-section" style="display:none">
-        <div class="progress-header">
-          <span class="progress-title">Agent Log</span>
-          <span class="spinner" id="progress-spinner" aria-hidden="true"></span>
+        <div class="chat-thread" id="chat-thread">
+          <div class="chat-msg bot">
+            <span class="msg-author">Privacy AI</span>
+            <span class="msg-text">Hello! Select a Word document above or type what you want me to fill on this page (e.g., <em>"Fill all"</em> or <em>"Fill name"</em>).</span>
+          </div>
         </div>
-        <div class="log-entries" id="log-entries" aria-live="polite"></div>
-      </div>
 
-      <!-- Metrics -->
-      <div class="metrics-section" id="metrics-section" style="display:none">
-        <div class="metrics-title">⚡ Performance</div>
-        <div class="metrics-grid">
-          <div class="metric-item"><span class="metric-label">Page Scan</span><span class="metric-val" id="m-scan">—</span></div>
-          <div class="metric-item"><span class="metric-label">AI Reasoning</span><span class="metric-val" id="m-backend">—</span></div>
-          <div class="metric-item"><span class="metric-label">Execution</span><span class="metric-val" id="m-exec">—</span></div>
-          <div class="metric-item"><span class="metric-label">Total</span><span class="metric-val metric-total" id="m-total">—</span></div>
+        <!-- Quick Action Chips -->
+        <div class="chat-chips">
+          <button class="chip-btn" data-cmd="Fill all form fields">⚡ Fill All</button>
+          <button class="chip-btn" data-cmd="Fill only name and email">👤 Name &amp; Email</button>
+          <button class="chip-btn" id="open-inspector-chip" data-cmd="Open Data Inspector Page">🔍 Data Inspector</button>
+          <button class="chip-btn" id="toggle-db-chip" data-cmd="View AI Database history">🗄️ AI Database</button>
+          <button class="chip-btn" data-cmd="Clear profile">🗑 Clear</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <input type="text" id="chat-input" placeholder="Type a command for Privacy AI…" autocomplete="off" />
+          <button id="chat-send-btn" class="chat-send-btn" title="Send Command">
+            <span>➔</span>
+          </button>
         </div>
       </div>
-    </section>
 
-    <!-- TAB 2: PRIVACY DASHBOARD -->
-    <section class="tab-panel" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
-      <div class="section-header"><h2>Privacy Dashboard</h2><p class="section-desc">What stays on your device vs. what the AI sees.</p></div>
-      <div class="privacy-score-card" id="privacy-score-card">
-        <div class="score-circle" id="score-circle"><span class="score-num" id="score-num">—</span><span class="score-label-sm">score</span></div>
-        <div class="score-details"><div class="score-title" id="score-title">Scan a page to see results</div><div class="score-sub" id="score-sub">Open the Agent tab and click Scan Page</div></div>
+      <!-- AI SQLite Database Viewer Card -->
+      <div class="card db-card" id="db-card" style="display:none">
+        <div class="card-header">
+          <span class="card-tag">🗄️ AI SQLITE DATABASE (TASKS.DB)</span>
+          <button id="refresh-db-btn" class="refresh-db-btn" title="Refresh Database Records">↻ Refresh</button>
+        </div>
+        <div class="db-summary-bar">
+          <span class="db-stat-item">RECORDS: <strong id="db-total-count">0</strong></span>
+          <span class="db-stat-item">STATUS: <strong class="db-online-status">CONNECTED</strong></span>
+        </div>
+        <div class="db-table-wrap">
+          <table class="db-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Task</th>
+                <th>Target Page</th>
+                <th>Actions</th>
+                <th>PII</th>
+                <th>Latency</th>
+              </tr>
+            </thead>
+            <tbody id="db-table-body">
+              <tr><td colspan="6" class="db-loading-td">Loading database history…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="split-panel">
-        <div class="split-col local-col"><div class="split-header"><span class="split-title">Stays Local</span></div><ul class="split-list" id="local-list"><li class="split-empty">No scan yet</li></ul></div>
-        <div class="split-col server-col"><div class="split-header"><span class="split-title">Sent to Server</span></div><ul class="split-list" id="server-list"><li class="split-empty">No scan yet</li></ul></div>
-      </div>
-      <div class="category-section" id="category-section" style="display:none">
-        <div class="cat-title">PII Categories Detected</div><div class="cat-grid" id="cat-grid"></div>
-      </div>
-      <div class="server-context-section" id="server-context-section" style="display:none">
-        <div class="server-ctx-title">🤖 What the AI Received</div><pre class="server-ctx-pre" id="server-ctx-pre"></pre>
-      </div>
-    </section>
 
-    <!-- TAB 3: SETTINGS -->
-    <section class="tab-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
-      <div class="section-header"><h2>Settings</h2></div>
-      <div class="settings-list">
-        <div class="setting-item"><div class="setting-info"><span class="setting-name">Backend URL</span></div><input type="text" id="s-backend-url" class="setting-input" value="http://localhost:8000" /></div>
-        <div class="setting-item"><div class="setting-info"><span class="setting-name">Ollama Model</span></div><input type="text" id="s-ollama-model" class="setting-input" value="llama3.2" /></div>
-        <div class="setting-item"><div class="setting-info"><span class="setting-name">Action Delay</span></div><input type="number" id="s-action-delay" class="setting-input" value="600" min="0" max="3000" /></div>
-        <div class="setting-item toggle-item"><div class="setting-info"><span class="setting-name">Privacy Protection</span></div><label class="toggle"><input type="checkbox" id="s-privacy" checked /><span class="toggle-slider"></span></label></div>
-        <div class="setting-item toggle-item"><div class="setting-info"><span class="setting-name">Confirmation Step</span></div><label class="toggle"><input type="checkbox" id="s-confirm" checked /><span class="toggle-slider"></span></label></div>
+      <!-- Privacy Shield Banner -->
+      <div class="card shield-card">
+        <div class="shield-icon-box">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ffffff" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(255,255,255,0.2)"/>
+          </svg>
+        </div>
+        <div class="shield-info">
+          <div class="shield-top">
+            <span class="shield-label">PRIVACY SHIELD</span>
+            <span class="shield-status">ACTIVE</span>
+          </div>
+          <p class="shield-desc">Sensitive information remains on-device.</p>
+        </div>
       </div>
-      <button class="btn btn-primary w-full" id="save-settings-btn">Save Settings</button>
-      <div class="save-status" id="settings-status" aria-live="polite"></div>
-    </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span>PRIVACY VISION AI</span> &bull; <span>v1.0.0</span>
+    </footer>
 
   </div>
 
+  <!-- JSZip must load before docx-parser -->
+  <script src="../assets/libs/jszip.min.js"></script>
+  <script src="../utils/docx-parser.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

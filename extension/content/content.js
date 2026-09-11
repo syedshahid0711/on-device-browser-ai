@@ -149,6 +149,20 @@
         break;
       }
 
+      /* Get DOM rects of sensitive fields for visual redaction */
+      case 'GET_DOM_RECTS': {
+        const scan = window.__piiDetector.scanPage();
+        const domRects = [];
+        scan.fields.forEach(field => {
+          if (field.sensitive && field._element) {
+            const rect = field._element.getBoundingClientRect();
+            domRects.push({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+          }
+        });
+        sendResponse({ ok: true, domRects });
+        break;
+      }
+
       /* Execute a full action plan returned by the backend LLM */
       case 'EXECUTE_PLAN': {
         const { actions } = msg;
@@ -177,30 +191,130 @@
         return true; // keep channel open for async response
       }
 
-      /* Validate form fields + show confirmation dialog, then submit */
+      /* Execute a VLM action based on CSS selectors */
+      case 'EXECUTE_VLM_PLAN': {
+        const { action } = msg;
+        if (!action || !action.target_css_selector) {
+          sendResponse({ ok: false, error: 'No valid action provided' });
+          break;
+        }
+
+        (async () => {
+          try {
+            if (window.__agentBanner) window.__agentBanner.show('🤖 VLM Vision Agent executing…');
+
+            const result = { action: action.action, target: action.target_css_selector, success: false };
+            try {
+              let element = document.querySelector(action.target_css_selector);
+
+              // Fallback: If VLM hallucinates a selector, try finding by text content for buttons
+              if (!element && action.action === 'click') {
+                log && log.warn(`VLM selector not found: ${action.target_css_selector}. Trying fallback...`);
+                const buttons = Array.from(document.querySelectorAll('button, a, input[type="submit"], input[type="button"]'));
+                element = buttons.find(b => b.innerText && b.innerText.toLowerCase().includes(
+                  action.target_css_selector.replace(/[^a-z0-9]/gi, '').toLowerCase()
+                ));
+              }
+
+              if (!element) {
+                throw new Error(`Element not found: ${action.target_css_selector}`);
+              }
+
+              // Highlight before executing
+              const origOutline = element.style.outline;
+              element.style.outline = '3px solid #4ade80';
+              await new Promise(r => setTimeout(r, 500));
+              element.style.outline = origOutline;
+
+              if (action.action === 'click') {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                await new Promise(r => setTimeout(r, 200));
+                element.click();
+                result.success = true;
+              } else if (action.action === 'fill') {
+                // Resolve __PROFILE__:<key> values from local storage
+                let fillValue = action.value || '';
+                if (typeof fillValue === 'string' && fillValue.startsWith('__PROFILE__:')) {
+                  const profileKey = fillValue.replace('__PROFILE__:', '').trim();
+                  const profile = await window.__profileStore.getProfile();
+                  fillValue = profile[profileKey] || '';
+                  if (!fillValue) throw new Error(`Profile key "${profileKey}" is empty — please import your Word document first`);
+                }
+                const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value');
+                if (setter && setter.set) setter.set.call(element, fillValue);
+                else element.value = fillValue;
+                element.dispatchEvent(new Event('input',  { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                element.dispatchEvent(new Event('blur',   { bubbles: true }));
+                result.success = true;
+              } else if (action.action === 'select') {
+                // Resolve profile value if needed
+                let selectValue = action.value || '';
+                if (typeof selectValue === 'string' && selectValue.startsWith('__PROFILE__:')) {
+                  const profileKey = selectValue.replace('__PROFILE__:', '').trim();
+                  const profile = await window.__profileStore.getProfile();
+                  selectValue = profile[profileKey] || '';
+                }
+                const selectLower = selectValue.toLowerCase();
+                let matched = false;
+                for (const opt of element.options) {
+                  if (opt.value.toLowerCase() === selectLower ||
+                      opt.text.toLowerCase().includes(selectLower) ||
+                      selectLower.includes(opt.value.toLowerCase())) {
+                    element.value = opt.value;
+                    matched = true;
+                    break;
+                  }
+                }
+                if (!matched && element.options.length > 1) {
+                  element.value = element.options[1].value; // fallback to first real option
+                }
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                result.success = true;
+              } else if (action.action === 'check') {
+                element.checked = true;
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                result.success = true;
+              } else if (action.action === 'scroll') {
+                window.scrollBy(0, 500);
+                result.success = true;
+              } else {
+                log && log.warn(`Unsupported VLM action: ${action.action}`);
+                result.error = `Unsupported action: ${action.action}`;
+              }
+
+            } catch (err) {
+              log && log.error('VLM Action error:', err);
+              result.success = false;
+              result.error = err.message;
+            }
+
+            if (result.success) {
+              sendResponse({ ok: true, result });
+            } else {
+              sendResponse({ ok: false, error: result.error });
+            }
+            if (window.__agentBanner) window.__agentBanner.hide();
+          } catch (err) {
+            sendResponse({ ok: false, error: err.message });
+            if (window.__agentBanner) window.__agentBanner.hide();
+          }
+        })();
+
+        return true;
+      }
+
+      /* Validate form fields + auto-submit (agent mode — no blocking dialog) */
       case 'CONFIRM_AND_SUBMIT': {
         (async () => {
           try {
-            const ctx = buildPageContext();
-            const rawScan = ctx._raw_scan;
-
-            const validation = validateForm(rawScan);
-            if (!validation.valid) {
-              sendResponse({ ok: false, validation_failed: true, issues: validation.issues });
-              return;
-            }
-
-            const { confirmed } = await showConfirmationDialog(rawScan);
-            if (!confirmed) {
-              sendResponse({ ok: false, cancelled: true });
-              return;
-            }
-
-            // Submit the first form on the page
+            // Submit the first form on the page directly (agent already has user consent)
             const form = document.querySelector('form');
             if (form) {
-              const submitBtn = form.querySelector('[type="submit"]');
+              const submitBtn = form.querySelector('[type="submit"], button[type="submit"]');
               if (submitBtn) {
+                submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                await new Promise(r => setTimeout(r, 400));
                 submitBtn.click();
               } else {
                 form.submit();
@@ -230,8 +344,53 @@
         break;
       }
 
+      /* Direct Form Fill on-device + Optional Auto Submit */
+      case 'DIRECT_FILL': {
+        const { profile, targetKeys, autoSubmit } = msg;
+        if (!profile || Object.keys(profile).length === 0) {
+          sendResponse({ ok: false, error: 'No profile data provided' });
+          break;
+        }
+
+        (async () => {
+          try {
+            if (!window.__directFiller) {
+              throw new Error('Direct filler module not loaded on page');
+            }
+
+            // 1. Fill specified fields from profile
+            const result = await window.__directFiller.fillForm(profile, targetKeys);
+
+            // 2. Submit form if requested or filling all fields
+            const shouldSubmit = (autoSubmit === true) || (!targetKeys && autoSubmit !== false);
+            if (shouldSubmit) {
+              await new Promise(r => setTimeout(r, 600));
+              const form = document.querySelector('form');
+              if (form) {
+                const submitBtn = form.querySelector('[type="submit"], button[type="submit"], #submit-btn, .btn-primary');
+                if (submitBtn) {
+                  submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  await new Promise(r => setTimeout(r, 400));
+                  submitBtn.click();
+                } else {
+                  form.submit();
+                }
+                result.submitted = true;
+              }
+            }
+
+            sendResponse({ ok: true, ...result });
+          } catch (err) {
+            sendResponse({ ok: false, error: err.message });
+          }
+        })();
+
+        return true; // keep async channel open
+      }
+
       default:
-        sendResponse({ ok: false, error: `Unknown message type: ${msg.type}` });
+        // Do not respond with an error for unknown types to let other content listeners handle them
+        break;
     }
   });
 

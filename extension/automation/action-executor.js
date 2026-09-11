@@ -23,7 +23,7 @@
 (function () {
   if (window.__actionExecutor) return; // idempotent
 
-  const ALLOWED_ACTIONS = new Set(['fill','click','select','check','uncheck','scroll','navigate']);
+  const ALLOWED_ACTIONS = new Set(['fill', 'click', 'select', 'check', 'uncheck', 'scroll', 'navigate']);
 
   /* ─────────────────────────────────────
      Find an element on the page by various means.
@@ -98,9 +98,9 @@
     } else {
       el.value = value;
     }
-    el.dispatchEvent(new Event('input',  { bubbles: true }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.dispatchEvent(new Event('blur',   { bubbles: true }));
+    el.dispatchEvent(new Event('blur', { bubbles: true }));
   }
 
   function highlightField(el) {
@@ -168,7 +168,7 @@
           const optVal = opt.value.toLowerCase();
           const optText = opt.text.toLowerCase();
           if (!optVal && !optText) continue;
-          
+
           if (
             optVal === targetLower ||
             (optText && optText.includes(targetLower)) ||
@@ -183,7 +183,7 @@
           }
         }
       }
-      
+
       // Fallback: select the first option with a non-empty value
       if (!matched) {
         for (const opt of el.options) {
@@ -223,7 +223,7 @@
           }
         }
       }
-      
+
       if (!matched && radios.length > 0) {
         radios[0].checked = true;
         matched = true;
@@ -291,7 +291,7 @@
 
       // Force Clearance Level to ALWAYS use profile data
       if (
-        action.target_id && 
+        action.target_id &&
         (action.target_id.toLowerCase().includes('clearance') || action.target_id.toLowerCase().includes('level')) &&
         (!action.value_source || action.value_source !== 'local_profile')
       ) {
@@ -304,14 +304,14 @@
       }
 
       switch (action.action) {
-        case 'fill':     return await handleFill(action);
-        case 'click':    return handleClick(action);
-        case 'select':   return await handleSelect(action);
-        case 'check':    return handleCheck(action, true);
-        case 'uncheck':  return handleCheck(action, false);
-        case 'scroll':   return handleScroll(action);
+        case 'fill': return await handleFill(action);
+        case 'click': return handleClick(action);
+        case 'select': return await handleSelect(action);
+        case 'check': return handleCheck(action, true);
+        case 'uncheck': return handleCheck(action, false);
+        case 'scroll': return handleScroll(action);
         case 'navigate': return handleNavigate(action);
-        default:         throw new Error(`Unknown action: "${action.action}"`);
+        default: throw new Error(`Unknown action: "${action.action}"`);
       }
     } catch (err) {
       window.__agentLogger && window.__agentLogger.error('Action failed:', action, err.message);

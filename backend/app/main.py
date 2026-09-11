@@ -5,7 +5,7 @@ FastAPI application entry point.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import health, analyze, task, extract
+from app.routes import health, analyze, task, extract, otp
 from app.utils.logger import get_logger
 import os
 
@@ -36,8 +36,16 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(analyze.router, prefix="/api", tags=["Agent"])
 app.include_router(task.router,    prefix="/api", tags=["Tasks"])
+app.include_router(otp.router)
 app.include_router(extract.router)
 
+
+from fastapi.staticfiles import StaticFiles
+import pathlib
+
+demo_path = pathlib.Path(__file__).parent.parent.parent / "demo-website"
+if demo_path.exists():
+    app.mount("/demo", StaticFiles(directory=str(demo_path), html=True), name="demo")
 
 @app.get("/", include_in_schema=False)
 async def root():
@@ -45,6 +53,7 @@ async def root():
         "service": "Privacy Browser Agent Backend",
         "version": "1.0.0",
         "docs":    "/docs",
+        "demo":    "/demo",
     }
 
 
