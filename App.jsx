@@ -821,27 +821,6 @@ export default function App() {
               </div>
 
               <div
-                className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
-                onClick={() => setActiveTab("profile")}
-              >
-                <span>◎</span> Local Profile
-              </div>
-
-              <div
-                className={`nav-item ${activeTab === "agent" ? "active" : ""}`}
-                onClick={() => setActiveTab("agent")}
-              >
-                <span>⌁</span> Form Agent
-              </div>
-
-              <div
-                className={`nav-item ${activeTab === "shield" ? "active" : ""}`}
-                onClick={() => setActiveTab("shield")}
-              >
-                <span>◇</span> Privacy Shield
-              </div>
-
-              <div
                 className={`nav-item ${activeTab === "inspector" ? "active" : ""}`}
                 onClick={openDataInspector}
               >
