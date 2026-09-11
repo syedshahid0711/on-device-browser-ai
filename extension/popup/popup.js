@@ -57,27 +57,8 @@
   }
 
   function renderProfilePreview(profile) {
-    if (!profilePreview || !profileFields) return;
-    const count = Object.keys(profile).length;
-    if (count === 0) { profilePreview.style.display = 'none'; return; }
-
-    const LABELS = {
-      name: 'Full Name', email: 'Email', phone: 'Phone',
-      dob: 'Date of Birth', address: 'Address', employee_id: 'Employee ID',
-      division: 'Division', gender: 'Gender', clearance: 'Clearance', password: 'Password',
-    };
-    const SENSITIVE = new Set(['password', 'email', 'phone']);
-
-    profileFields.innerHTML = Object.entries(profile).map(([k, v]) => {
-      const label = LABELS[k] || k;
-      const display = SENSITIVE.has(k) ? '••••••••' : v;
-      return `<div class="profile-row">
-        <span class="profile-key">${label}</span>
-        <span class="profile-val">${escapeHtml(display)}</span>
-      </div>`;
-    }).join('');
-
-    profilePreview.style.display = 'block';
+    // Disabled: profile data is never exposed as plain text in the extension popup
+    if (profilePreview) profilePreview.style.display = 'none';
   }
 
   function escapeHtml(str) {
@@ -115,7 +96,7 @@
   let pendingFile = null;
 
   function getTargetEmail() {
-    return (targetEmailInput && targetEmailInput.value ? targetEmailInput.value.trim() : '') || 'syedshahid0711@gmail.com';
+    return (targetEmailInput && targetEmailInput.value ? targetEmailInput.value.trim() : '');
   }
 
   // Load saved email and profile on startup
@@ -323,6 +304,10 @@
     }
     if (fileSubDisplay) fileSubDisplay.textContent = `${count} fields extracted locally`;
     log(`✅ Extracted ${count} fields from "${file.name}"`, 'system');
+    if (profile.email && targetEmailInput && !targetEmailInput.value) {
+      targetEmailInput.value = profile.email;
+      chrome.storage.local.set({ pba_user_email: profile.email });
+    }
     renderProfilePreview(profile);
     return profile;
   }
@@ -332,10 +317,11 @@
     clearLog();
 
     if (pendingFile && activeOtpCode) {
+      const emailToUse = getTargetEmail() || 'your email';
       log('🔒 OTP verification required before file acceptance.', 'error');
-      addChatMessage('Privacy AI', `🔒 Please enter the OTP sent to ${TARGET_EMAIL} to verify and unlock your Word document first!`, 'bot');
+      addChatMessage('Privacy AI', `🔒 Please enter the OTP sent to ${emailToUse} to verify and unlock your Word document first!`, 'bot');
       if (missionTitle) missionTitle.textContent = 'OTP REQUIRED';
-      if (missionSub) missionSub.textContent = `Please enter the OTP sent to ${TARGET_EMAIL}.`;
+      if (missionSub) missionSub.textContent = `Please enter the OTP sent to ${emailToUse}.`;
       setBusy(false);
       return;
     }

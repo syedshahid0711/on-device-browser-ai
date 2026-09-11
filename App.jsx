@@ -397,9 +397,26 @@ export default function App() {
         setInspectorProfile(profile);
         setInspectorFillDetails(res.pba_fill_details || []);
 
-        if (Object.keys(profile).length === 0) return;
+        if (Object.keys(profile).length === 0) {
+          setIsroFormData({
+            full_name: "",
+            employee_id: "",
+            dob: "",
+            gender: "",
+            email: "",
+            phone: "",
+            address: "",
+            division: "",
+            clearance_level: "",
+            password: "",
+            confirm_password: "",
+            terms: false,
+          });
+          setWordFileLoaded(false);
+          return;
+        }
 
-        // Map profile keys → form state
+        // Map profile keys → form state strictly from Word file data
         const newForm = {
           full_name: "",
           employee_id: "",
@@ -435,9 +452,50 @@ export default function App() {
     }
   };
 
+  const handleClearAllData = () => {
+    setIsroFormData({
+      full_name: "",
+      employee_id: "",
+      dob: "",
+      gender: "",
+      email: "",
+      phone: "",
+      address: "",
+      division: "",
+      clearance_level: "",
+      password: "",
+      confirm_password: "",
+      terms: false,
+    });
+    setFieldErrors({});
+    setWordFileLoaded(false);
+    setInspectorProfile({});
+    setInspectorFillDetails([]);
+    if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
+      window.chrome.storage.local.remove(["pba_user_profile", "pba_fill_details"]);
+    }
+  };
+
   useEffect(() => {
+    // Wipe any query parameters from URL bar immediately
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     loadInspectorData();
     loadAndApplyWordProfile();
+
+    if (typeof window !== "undefined" && window.chrome && window.chrome.storage && window.chrome.storage.onChanged) {
+      const handleStorageChange = (changes, area) => {
+        if (area === "local" && (changes.pba_user_profile || changes.pba_fill_details)) {
+          loadInspectorData();
+          loadAndApplyWordProfile();
+        }
+      };
+      window.chrome.storage.onChanged.addListener(handleStorageChange);
+      return () => {
+        window.chrome.storage.onChanged.removeListener(handleStorageChange);
+      };
+    }
   }, []);
 
   const openInspector = () => {
@@ -1035,6 +1093,9 @@ export default function App() {
                   <div className="cyber-btn-row">
                     <button type="button" className="cyber-btn-outline" onClick={openWebDemoForm}>
                       🚀 Launch External Webform
+                    </button>
+                    <button type="button" className="cyber-btn-outline" onClick={handleClearAllData} style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#f87171" }}>
+                      🗑 Clear Form
                     </button>
                     <button
                       type="submit"

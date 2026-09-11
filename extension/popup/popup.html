@@ -193,7 +193,7 @@
       </div>
       <div class="email-input-box">
         <label for="target-email-input" class="email-label">✉️ Recipient Email for OTP Verification:</label>
-        <input type="email" id="target-email-input" class="email-input" placeholder="e.g. user@gmail.com" value="syedshahid0711@gmail.com" autocomplete="email" />
+        <input type="email" id="target-email-input" class="email-input" placeholder="e.g. user@gmail.com" value="" autocomplete="email" />
       </div>
       <label class="file-drop-zone" for="p-import-file">
         <div class="drop-icon-box">📄</div>
@@ -211,7 +211,7 @@
         <div class="otp-tag-wrap"><span>🔒</span><span class="fn-tag">SECURITY CODE VERIFICATION</span></div>
         <span class="otp-status-badge" id="otp-status-badge">SENT</span>
       </div>
-      <p class="otp-desc" id="otp-desc">An OTP has been sent to <strong id="otp-target-email-display">syedshahid0711@gmail.com</strong></p>
+      <p class="otp-desc" id="otp-desc">An OTP has been sent to <strong id="otp-target-email-display">your email address</strong></p>
       <div class="otp-input-group">
         <input type="text" id="otp-input" maxlength="6" placeholder="Enter 6-digit OTP" autocomplete="off" />
         <button id="verify-otp-btn" class="verify-btn">UNLOCK ➔</button>
@@ -289,7 +289,6 @@
 
     <!-- Hidden elements required by popup.js -->
     <div id="log-box" style="display:none"></div>
-    <div id="profile-preview" style="display:none"><div id="profile-fields"></div></div>
     <button id="clear-profile-btn" style="display:none">Clear</button>
     <button id="run-btn" style="display:none"><span id="run-btn-text">Run</span><span id="run-btn-icon"></span></button>
 
