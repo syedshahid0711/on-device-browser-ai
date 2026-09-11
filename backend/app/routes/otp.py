@@ -83,6 +83,18 @@ async def send_via_https_api(to_email: str, otp: str) -> bool:
         async with httpx.AsyncClient(timeout=6.0) as client:
             resp = await client.post(url, data=payload, headers=headers)
             if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    if data.get("success") == "true" or data.get("success") is True:
+                        log.info(f"⚡ Email OTP dispatched to {to_email} via HTTPS API! Ref: {time_stamp}")
+                        return True
+                    elif "Activation" in data.get("message", ""):
+                        log.warn(f"📬 FormSubmit activation email sent to {to_email}! Check inbox and click 'Activate Form' once, or add an App Password to SMTP_PASSWORD in backend/.env for direct dispatch.")
+                        if latest_otp_info:
+                            latest_otp_info["delivery_notice"] = f"Activation email sent by FormSubmit to {to_email}"
+                        return False
+                except Exception:
+                    pass
                 log.info(f"⚡ Email OTP dispatched to {to_email} via HTTPS API! Ref: {time_stamp}")
                 return True
             else:
