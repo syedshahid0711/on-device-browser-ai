@@ -270,8 +270,11 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(10,61,145,0.15);
 }
 
-input.field-valid { border-color: var(--clr-success); }
-input.field-invalid { border-color: var(--clr-danger); }
+input.field-valid, select.field-valid { border-color: var(--clr-success); }
+input.field-invalid, select.field-invalid {
+  border-color: var(--clr-danger) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25) !important;
+}
 
 /* Highlight fields filled by the agent */
 input.agent-filled,

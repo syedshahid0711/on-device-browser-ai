@@ -344,6 +344,7 @@ export default function App() {
   const [missingFields, setMissingFields] = useState([]);
   const [showMissingPopup, setShowMissingPopup] = useState(false);
   const [wordFileLoaded, setWordFileLoaded] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Profile keys → form field names
   const PROFILE_TO_FORM = {
@@ -360,8 +361,23 @@ export default function App() {
     clearance_level: "clearance_level",
   };
 
-  // Fields that must be present (excluding password — user enters manually)
-  const REQUIRED_FORM_FIELDS = ["full_name", "employee_id", "dob", "gender", "email", "phone", "address", "division", "clearance_level"];
+  // Fields expected from the Word document (password is never in Word file)
+  const REQUIRED_WORD_FIELDS = ["full_name", "employee_id", "dob", "gender", "email", "phone", "address", "division", "clearance_level"];
+
+  // All fields required for form submission (password must be entered manually)
+  const REQUIRED_FORM_FIELDS = [
+    "full_name",
+    "employee_id",
+    "dob",
+    "gender",
+    "email",
+    "phone",
+    "address",
+    "division",
+    "clearance_level",
+    "password",
+    "confirm_password",
+  ];
 
   /* Load inspector profile from Chrome storage */
   const loadInspectorData = () => {
@@ -409,9 +425,12 @@ export default function App() {
         setIsroFormData(newForm);
         setWordFileLoaded(true);
 
-        // Find which required fields are still missing
-        const missing = REQUIRED_FORM_FIELDS.filter(f => !newForm[f] || String(newForm[f]).trim() === "");
+        // Find which required fields are still missing from the Word document
+        const missing = REQUIRED_WORD_FIELDS.filter(f => !newForm[f] || String(newForm[f]).trim() === "");
         setMissingFields(missing);
+        if (missing.length > 0) {
+          setShowMissingPopup(true);
+        }
       });
     }
   };
@@ -458,21 +477,57 @@ export default function App() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    // Clear red error as soon as user starts typing/selecting
+    setFieldErrors((prev) => {
+      if (!prev[name] && !(name === "password" && prev.confirm_password === "mismatch")) return prev;
+      const n = { ...prev };
+      delete n[name];
+      if (name === "password" && n.confirm_password === "mismatch") {
+        delete n.confirm_password;
+      }
+      return n;
+    });
   };
 
   const handleFormSubmit = (e) => {
     if (e && e.preventDefault) e.preventDefault();
 
-    // Check for missing required fields (excluding password)
-    const missing = REQUIRED_FORM_FIELDS.filter(f => !isroFormData[f] || String(isroFormData[f]).trim() === "");
+    const errors = {};
+    const missing = [];
 
-    if (missing.length > 0) {
-      setMissingFields(missing);
-      setShowMissingPopup(true);
-      return; // Don't submit — show missing popup first
+    // Check all required fields — mark each empty one red
+    REQUIRED_FORM_FIELDS.forEach((f) => {
+      const val = isroFormData[f];
+      if (!val || String(val).trim() === "") {
+        errors[f] = true;
+        missing.push(f);
+      }
+    });
+
+    // Check password confirmation matching
+    if (isroFormData.password && isroFormData.confirm_password && isroFormData.password !== isroFormData.confirm_password) {
+      errors.confirm_password = "mismatch";
+      if (!missing.includes("confirm_password")) {
+        missing.push("confirm_password");
+      }
     }
 
-    // All required fields present — submit!
+    if (missing.length > 0) {
+      // Build error map & highlight all invalid fields red
+      setFieldErrors(errors);
+      setMissingFields(missing);
+
+      // Scroll to the first red field
+      const firstField = document.querySelector(`[name="${missing[0]}"]`);
+      if (firstField) {
+        firstField.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstField.focus();
+      }
+      return; // Block submission completely
+    }
+
+    // All fields valid — clear errors and submit
+    setFieldErrors({});
     const ref = `ISRO-2026-${Math.floor(100000 + Math.random() * 900000)}`;
     setSubmissionRef(ref);
     setShowThankYouModal(true);
@@ -804,41 +859,44 @@ export default function App() {
                         <input
                           type="text"
                           name="full_name"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.full_name ? " cyber-input--error" : ""}`}
                           value={isroFormData.full_name}
                           onChange={handleInputChange}
                           placeholder="e.g. Shahid Khan"
                           required
                         />
+                        {fieldErrors.full_name && <span className="field-error-msg">⚠ Full Name is required</span>}
                       </div>
                       <div className="cyber-group">
                         <label>Employee ID *</label>
                         <input
                           type="text"
                           name="employee_id"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.employee_id ? " cyber-input--error" : ""}`}
                           value={isroFormData.employee_id}
                           onChange={handleInputChange}
                           placeholder="e.g. EMP2024001"
                           required
                         />
+                        {fieldErrors.employee_id && <span className="field-error-msg">⚠ Employee ID is required</span>}
                       </div>
                       <div className="cyber-group">
                         <label>Date of Birth *</label>
                         <input
                           type="date"
                           name="dob"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.dob ? " cyber-input--error" : ""}`}
                           value={isroFormData.dob}
                           onChange={handleInputChange}
                           required
                         />
+                        {fieldErrors.dob && <span className="field-error-msg">⚠ Date of Birth is required</span>}
                       </div>
                       <div className="cyber-group">
                         <label>Gender *</label>
                         <select
                           name="gender"
-                          className="cyber-select"
+                          className={`cyber-select${fieldErrors.gender ? " cyber-input--error" : ""}`}
                           value={isroFormData.gender}
                           onChange={handleInputChange}
                           required
@@ -848,6 +906,7 @@ export default function App() {
                           <option value="female">Female</option>
                           <option value="non_binary">Non-binary</option>
                         </select>
+                        {fieldErrors.gender && <span className="field-error-msg">⚠ Gender is required</span>}
                       </div>
                     </div>
                   </fieldset>
@@ -861,36 +920,39 @@ export default function App() {
                         <input
                           type="email"
                           name="email"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.email ? " cyber-input--error" : ""}`}
                           value={isroFormData.email}
                           onChange={handleInputChange}
                           placeholder="you@example.com"
                           required
                         />
+                        {fieldErrors.email && <span className="field-error-msg">⚠ Email Address is required</span>}
                       </div>
                       <div className="cyber-group">
                         <label>Phone Number *</label>
                         <input
                           type="tel"
                           name="phone"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.phone ? " cyber-input--error" : ""}`}
                           value={isroFormData.phone}
                           onChange={handleInputChange}
                           placeholder="+91 98765 43210"
                           required
                         />
+                        {fieldErrors.phone && <span className="field-error-msg">⚠ Phone Number is required</span>}
                       </div>
                       <div className="cyber-group" style={{ gridColumn: "1 / -1" }}>
                         <label>Home Address *</label>
                         <input
                           type="text"
                           name="address"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.address ? " cyber-input--error" : ""}`}
                           value={isroFormData.address}
                           onChange={handleInputChange}
                           placeholder="Street, City, State, PIN"
                           required
                         />
+                        {fieldErrors.address && <span className="field-error-msg">⚠ Home Address is required</span>}
                       </div>
                     </div>
                   </fieldset>
@@ -903,7 +965,7 @@ export default function App() {
                         <label>Division *</label>
                         <select
                           name="division"
-                          className="cyber-select"
+                          className={`cyber-select${fieldErrors.division ? " cyber-input--error" : ""}`}
                           value={isroFormData.division}
                           onChange={handleInputChange}
                           required
@@ -915,12 +977,13 @@ export default function App() {
                           <option value="avionics">Avionics</option>
                           <option value="mission_control">Mission Control</option>
                         </select>
+                        {fieldErrors.division && <span className="field-error-msg">⚠ Division is required</span>}
                       </div>
                       <div className="cyber-group">
                         <label>Clearance Level *</label>
                         <select
                           name="clearance_level"
-                          className="cyber-select"
+                          className={`cyber-select${fieldErrors.clearance_level ? " cyber-input--error" : ""}`}
                           value={isroFormData.clearance_level}
                           onChange={handleInputChange}
                           required
@@ -931,6 +994,7 @@ export default function App() {
                           <option value="secret">Secret</option>
                           <option value="top_secret">Top Secret</option>
                         </select>
+                        {fieldErrors.clearance_level && <span className="field-error-msg">⚠ Clearance Level is required</span>}
                       </div>
                     </div>
                   </fieldset>
@@ -944,22 +1008,30 @@ export default function App() {
                         <input
                           type="password"
                           name="password"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.password ? " cyber-input--error" : ""}`}
                           value={isroFormData.password}
                           onChange={handleInputChange}
                           placeholder="Minimum 8 characters"
+                          required
                         />
+                        {fieldErrors.password && <span className="field-error-msg">⚠ Account Password is required</span>}
                       </div>
                       <div className="cyber-group">
                         <label>Confirm Password *</label>
                         <input
                           type="password"
                           name="confirm_password"
-                          className="cyber-input"
+                          className={`cyber-input${fieldErrors.confirm_password ? " cyber-input--error" : ""}`}
                           value={isroFormData.confirm_password}
                           onChange={handleInputChange}
                           placeholder="Re-enter password"
+                          required
                         />
+                        {fieldErrors.confirm_password && (
+                          <span className="field-error-msg">
+                            {fieldErrors.confirm_password === "mismatch" ? "⚠ Passwords do not match" : "⚠ Confirm Password is required"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </fieldset>

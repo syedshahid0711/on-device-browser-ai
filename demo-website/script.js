@@ -163,7 +163,6 @@
     let valid = true;
 
     requiredFields.forEach(field => {
-      if (field === passwordInput && !field.value) return;
       if (field.type === 'checkbox') {
         if (!field.checked) { valid = false; field.classList.add('field-invalid'); }
         return;
@@ -171,7 +170,7 @@
       if (!validateField(field)) valid = false;
     });
 
-    if (passwordInput.value && confirmInput.value !== passwordInput.value) {
+    if (!confirmInput.value || confirmInput.value !== passwordInput.value) {
       confirmInput.classList.add('field-invalid');
       valid = false;
     }
