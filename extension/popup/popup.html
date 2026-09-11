@@ -281,12 +281,6 @@
       </div>
     </div>
 
-    <!-- Open Dashboard CTA -->
-    <button class="console-button" id="open-dashboard-btn" style="margin-top:14px">
-      <span>OPEN PRIVACYVISION</span>
-      <strong>→</strong>
-    </button>
-
     <!-- Hidden elements required by popup.js -->
     <div id="log-box" style="display:none"></div>
     <button id="clear-profile-btn" style="display:none">Clear</button>
@@ -304,11 +298,6 @@
   <script src="../assets/libs/jszip.min.js"></script>
   <script src="../utils/docx-parser.js"></script>
   <script src="popup.js"></script>
-  <script>
-    document.getElementById('open-dashboard-btn').addEventListener('click', () => {
-      chrome.tabs.create({ url: 'http://localhost:3000/' });
-    });
-  </script>
 
 </body>
 </html>
