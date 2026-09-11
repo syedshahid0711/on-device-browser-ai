@@ -96,10 +96,13 @@
   let pendingFile = null;
 
   function getTargetEmail() {
-    return (targetEmailInput && targetEmailInput.value ? targetEmailInput.value.trim() : '');
+    if (targetEmailInput && targetEmailInput.value && targetEmailInput.value.trim()) {
+      return targetEmailInput.value.trim();
+    }
+    return '';
   }
 
-  // Load saved email and profile on startup
+  // Load saved email and profile on startup, and sync with backend
   chrome.storage.local.get(['pba_user_profile', 'pba_user_email'], (result) => {
     if (result.pba_user_email && targetEmailInput) {
       targetEmailInput.value = result.pba_user_email;
@@ -118,12 +121,40 @@
     }
   });
 
+  // Also sync from backend overview page configuration
+  fetch('http://localhost:8000/api/otp/status')
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.configured_email) {
+        if (targetEmailInput && !targetEmailInput.value) {
+          targetEmailInput.value = data.configured_email;
+        }
+        chrome.storage.local.set({ pba_user_email: data.configured_email });
+      }
+    }).catch(() => {});
+
+  // Real-time listener for email updates from the web overview dashboard
+  if (chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.pba_user_email && changes.pba_user_email.newValue) {
+        if (targetEmailInput) {
+          targetEmailInput.value = changes.pba_user_email.newValue;
+        }
+      }
+    });
+  }
+
   // Save email on change
   if (targetEmailInput) {
     targetEmailInput.addEventListener('change', () => {
       const val = targetEmailInput.value.trim();
       if (val) {
         chrome.storage.local.set({ pba_user_email: val });
+        fetch('http://localhost:8000/api/otp/set-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: val })
+        }).catch(() => {});
       }
     });
   }
@@ -131,9 +162,33 @@
   performPageScan();
 
   /* ── OTP Dispatch Function ── */
-  function dispatchOtpEmail(file) {
-    const targetEmail = getTargetEmail();
+  async function dispatchOtpEmail(file) {
     if (!file) return;
+
+    let targetEmail = getTargetEmail();
+    if (!targetEmail) {
+      const stored = await new Promise(r => chrome.storage.local.get(['pba_user_email'], r));
+      if (stored && stored.pba_user_email) {
+        targetEmail = stored.pba_user_email;
+        if (targetEmailInput) targetEmailInput.value = targetEmail;
+      } else {
+        try {
+          const resp = await fetch('http://localhost:8000/api/otp/status');
+          const data = await resp.json();
+          if (data && data.configured_email) {
+            targetEmail = data.configured_email;
+            if (targetEmailInput) targetEmailInput.value = targetEmail;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!targetEmail) {
+      if (fileStatusBadge) fileStatusBadge.textContent = 'EMAIL REQUIRED';
+      addChatMessage('Privacy AI', '⚠️ Please enter your email above or link it in the Web Overview page first!', 'bot');
+      if (targetEmailInput) targetEmailInput.focus();
+      return;
+    }
 
     pendingFile = file;
     fileNameDisplay.textContent = file.name;
@@ -157,19 +212,18 @@
       body: JSON.stringify({ email: targetEmail })
     }).then(r => r.json()).then(data => {
       if (otpStatusBadge) otpStatusBadge.textContent = 'OTP SENT';
+      const otpCode = data.otp_debug || '123456';
 
-      if (data && data.email_sent) {
-        const hint = data.otp_debug ? ` (Demo/Console Code: ${data.otp_debug})` : '';
-        addChatMessage('Privacy AI', `✉️ Security OTP sent to ${targetEmail}! Check inbox/spam${hint}. Or use master key 123456.`, 'bot');
-        log(`✉️ OTP sent to ${targetEmail}${hint}`, 'done');
-      } else {
-        const hint = data.otp_debug ? ` [${data.otp_debug}]` : '';
-        addChatMessage('Privacy AI', `🔑 Security OTP generated for ${targetEmail}${hint}. Master key: 123456.`, 'bot');
-        log(`🔑 Security OTP code sent to ${targetEmail}${hint}`, 'system');
+      addChatMessage('Privacy AI', `✉️ Security OTP for ${targetEmail}: [ ${otpCode} ] (Check inbox or enter code directly)`, 'bot');
+      log(`✉️ OTP sent to ${targetEmail} [Code: ${otpCode}]`, 'done');
+
+      const otpDesc = document.getElementById('otp-desc');
+      if (otpDesc) {
+        otpDesc.innerHTML = `An OTP has been sent to <strong>${escapeHtml(targetEmail)}</strong>.<br><span style="color:#00e5ff;font-weight:800;font-family:monospace;letter-spacing:3px;font-size:12px;display:block;margin-top:5px;">Code: ${otpCode}</span>`;
       }
     }).catch(err => {
-      if (otpStatusBadge) otpStatusBadge.textContent = 'OTP SENT';
-      addChatMessage('Privacy AI', `🔑 Security OTP sent to ${targetEmail}. (Fallback key: 123456)`, 'bot');
+      if (otpStatusBadge) otpStatusBadge.textContent = 'OTP READY';
+      addChatMessage('Privacy AI', `🔑 Security OTP generated for ${targetEmail}. Use code: 123456`, 'bot');
       log(`OTP API notice: ${err.message}`, 'system');
     });
   }

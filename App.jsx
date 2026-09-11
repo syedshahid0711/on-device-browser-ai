@@ -343,8 +343,15 @@ export default function App() {
   const [copiedRef, setCopiedRef] = useState(false);
   const [missingFields, setMissingFields] = useState([]);
   const [showMissingPopup, setShowMissingPopup] = useState(false);
-  const [wordFileLoaded, setWordFileLoaded] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Security Email & Live OTP for Extension
+  const [securityEmail, setSecurityEmail] = useState("");
+  const [emailSaved, setEmailSaved] = useState(false);
+  const [activeOtp, setActiveOtp] = useState("");
+  const [otpTimestamp, setOtpTimestamp] = useState("");
+  const [otpTargetDisplay, setOtpTargetDisplay] = useState("");
+  const [copiedOtp, setCopiedOtp] = useState(false);
 
   // Profile keys → form field names
   const PROFILE_TO_FORM = {
@@ -476,6 +483,30 @@ export default function App() {
     }
   };
 
+  const handleSaveSecurityEmail = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const clean = securityEmail.trim();
+    if (!clean) return;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pba_user_email", clean);
+      if (window.chrome && window.chrome.storage) {
+        window.chrome.storage.local.set({ pba_user_email: clean });
+      }
+    }
+
+    try {
+      await fetch("http://localhost:8000/api/otp/set-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: clean }),
+      });
+    } catch (_) {}
+
+    setEmailSaved(true);
+    setTimeout(() => setEmailSaved(false), 3000);
+  };
+
   useEffect(() => {
     // Wipe any query parameters from URL bar immediately
     if (typeof window !== "undefined" && window.location.search) {
@@ -484,18 +515,59 @@ export default function App() {
     loadInspectorData();
     loadAndApplyWordProfile();
 
+    // Fetch initial security email from chrome.storage or localStorage
+    if (typeof window !== "undefined") {
+      const localEmail = localStorage.getItem("pba_user_email") || "";
+      if (localEmail) setSecurityEmail(localEmail);
+      if (window.chrome && window.chrome.storage) {
+        window.chrome.storage.local.get(["pba_user_email"], (res) => {
+          if (res.pba_user_email) setSecurityEmail(res.pba_user_email);
+        });
+      }
+    }
+
+    // Sync with backend OTP status
+    const fetchOtpStatus = () => {
+      fetch("http://localhost:8000/api/otp/status")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && data.success) {
+            if (data.configured_email) {
+              setSecurityEmail((prev) => prev || data.configured_email);
+            }
+            if (data.latest_otp) {
+              setActiveOtp(data.latest_otp);
+              setOtpTimestamp(data.timestamp);
+              setOtpTargetDisplay(data.latest_email);
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchOtpStatus();
+    const otpInterval = setInterval(fetchOtpStatus, 2500);
+
     if (typeof window !== "undefined" && window.chrome && window.chrome.storage && window.chrome.storage.onChanged) {
       const handleStorageChange = (changes, area) => {
-        if (area === "local" && (changes.pba_user_profile || changes.pba_fill_details)) {
-          loadInspectorData();
-          loadAndApplyWordProfile();
+        if (area === "local") {
+          if (changes.pba_user_profile || changes.pba_fill_details) {
+            loadInspectorData();
+            loadAndApplyWordProfile();
+          }
+          if (changes.pba_user_email && changes.pba_user_email.newValue) {
+            setSecurityEmail(changes.pba_user_email.newValue);
+          }
         }
       };
       window.chrome.storage.onChanged.addListener(handleStorageChange);
       return () => {
+        clearInterval(otpInterval);
         window.chrome.storage.onChanged.removeListener(handleStorageChange);
       };
     }
+
+    return () => clearInterval(otpInterval);
   }, []);
 
   const openInspector = () => {
@@ -1117,6 +1189,45 @@ export default function App() {
                     <br />
                     <span>Your control.</span>
                   </h1>
+
+                  {/* OVERVIEW SECURITY EMAIL QUICK LINK */}
+                  <div className="overview-email-card">
+                    <div className="overview-email-top">
+                      <span className="overview-email-icon">✉️</span>
+                      <div>
+                        <strong>Extension Security OTP Email</strong>
+                        <p>OTPs for Word document attachments are sent to this address</p>
+                      </div>
+                    </div>
+                    <form onSubmit={handleSaveSecurityEmail} className="overview-email-form">
+                      <input
+                        type="email"
+                        placeholder="Enter email e.g. user@gmail.com"
+                        value={securityEmail}
+                        onChange={(e) => setSecurityEmail(e.target.value)}
+                        className="overview-email-input"
+                        required
+                      />
+                      <button type="submit" className="overview-email-btn">
+                        {emailSaved ? "✓ Linked!" : "Set Security Email"}
+                      </button>
+                    </form>
+                    {activeOtp && (
+                      <div className="overview-otp-alert">
+                        <span>⚡ Active Verification Code: <strong>{activeOtp}</strong></span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(activeOtp);
+                            setCopiedOtp(true);
+                            setTimeout(() => setCopiedOtp(false), 2000);
+                          }}
+                        >
+                          {copiedOtp ? "✓ Copied" : "📋 Copy OTP"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="processing">
@@ -1179,6 +1290,66 @@ export default function App() {
 
               <div className="score-bar">
                 <div></div>
+              </div>
+            </div>
+
+            {/* SECURITY OTP CONFIGURATION & LIVE CODE STATION */}
+            <div className="otp-security-box">
+              <div className="otp-security-header">
+                <span className="otp-security-tag">🔐 EXTENSION OTP AUTH</span>
+                <span className={`otp-status-chip ${securityEmail ? "active" : ""}`}>
+                  {emailSaved ? "SAVED ✓" : securityEmail ? "LINKED" : "UNLINKED"}
+                </span>
+              </div>
+              <p className="otp-security-desc">
+                Authorized email used by the browser extension to send real one-time passwords for Word files.
+              </p>
+
+              <form onSubmit={handleSaveSecurityEmail} className="otp-security-form">
+                <input
+                  type="email"
+                  className="cyber-input otp-email-input"
+                  placeholder="Enter email e.g. user@gmail.com"
+                  value={securityEmail}
+                  onChange={(e) => setSecurityEmail(e.target.value)}
+                  required
+                />
+                <button type="submit" className="cyber-btn-primary otp-save-btn">
+                  {emailSaved ? "✓ Saved!" : "Link Email ➔"}
+                </button>
+              </form>
+
+              {/* LIVE OTP MONITOR */}
+              <div className="live-otp-monitor">
+                <div className="live-otp-header">
+                  <span className="live-otp-title">⚡ ACTIVE ONE-TIME PASSWORD</span>
+                  <span className="live-otp-time">{otpTimestamp || "Live"}</span>
+                </div>
+                {activeOtp ? (
+                  <div className="live-otp-active-row">
+                    <span className="live-otp-digits">{activeOtp}</span>
+                    <button
+                      type="button"
+                      className="live-otp-copy-btn"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(activeOtp);
+                        setCopiedOtp(true);
+                        setTimeout(() => setCopiedOtp(false), 2000);
+                      }}
+                    >
+                      {copiedOtp ? "✓ Copied" : "📋 Copy Code"}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="live-otp-waiting">
+                    Attach a .docx file in the extension to dispatch an instant 6-digit OTP code to your inbox.
+                  </p>
+                )}
+                {otpTargetDisplay && (
+                  <div className="live-otp-footer">
+                    Sent to: <strong>{otpTargetDisplay}</strong>
+                  </div>
+                )}
               </div>
             </div>
           </aside>
