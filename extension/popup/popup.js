@@ -2,30 +2,30 @@
   'use strict';
 
   /* ── DOM refs ── */
-  const importFile        = document.getElementById('p-import-file');
-  const fileNameDisplay   = document.getElementById('file-name-display');
-  const fileSubDisplay    = document.getElementById('file-sub-display');
-  const fileStatusBadge   = document.getElementById('file-status-badge');
-  const runBtn            = document.getElementById('run-btn');
-  const runBtnText        = document.getElementById('run-btn-text');
-  const runBtnIcon        = document.getElementById('run-btn-icon');
-  const logBox            = document.getElementById('log-box');
-  const profilePreview    = document.getElementById('profile-preview');
-  const profileFields     = document.getElementById('profile-fields');
-  const clearBtn          = document.getElementById('clear-profile-btn');
+  const importFile = document.getElementById('p-import-file');
+  const fileNameDisplay = document.getElementById('file-name-display');
+  const fileSubDisplay = document.getElementById('file-sub-display');
+  const fileStatusBadge = document.getElementById('file-status-badge');
+  const runBtn = document.getElementById('run-btn');
+  const runBtnText = document.getElementById('run-btn-text');
+  const runBtnIcon = document.getElementById('run-btn-icon');
+  const logBox = document.getElementById('log-box');
+  const profilePreview = document.getElementById('profile-preview');
+  const profileFields = document.getElementById('profile-fields');
+  const clearBtn = document.getElementById('clear-profile-btn');
 
-  const missionTitle      = document.getElementById('mission-title');
-  const missionSub        = document.getElementById('mission-sub');
-  const piiCountEl        = document.getElementById('pii-count');
-  const inferenceMsEl     = document.getElementById('inference-ms');
-  const targetTitleEl     = document.getElementById('target-title');
-  const chkStatus3        = document.getElementById('chk-status-3');
+  const missionTitle = document.getElementById('mission-title');
+  const missionSub = document.getElementById('mission-sub');
+  const piiCountEl = document.getElementById('pii-count');
+  const inferenceMsEl = document.getElementById('inference-ms');
+  const targetTitleEl = document.getElementById('target-title');
+  const chkStatus3 = document.getElementById('chk-status-3');
 
   /* ── Chatbot DOM refs ── */
-  const chatThread        = document.getElementById('chat-thread');
-  const chatInput         = document.getElementById('chat-input');
-  const chatSendBtn       = document.getElementById('chat-send-btn');
-  const chipBtns          = document.querySelectorAll('.chip-btn');
+  const chatThread = document.getElementById('chat-thread');
+  const chatInput = document.getElementById('chat-input');
+  const chatSendBtn = document.getElementById('chat-send-btn');
+  const chipBtns = document.querySelectorAll('.chip-btn');
 
   /* ── Logging & Chat Helpers ── */
   function log(msg, type = 'normal') {
@@ -63,8 +63,8 @@
 
   function escapeHtml(str) {
     return String(str)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   /* ── Live Page Scan & PII Count Update ── */
@@ -86,23 +86,20 @@
 
   /* ── OTP Verification State & Target Email Persistence ── */
   const targetEmailInput = document.getElementById('target-email-input');
-  const resendOtpBtn     = document.getElementById('resend-otp-btn');
+  const resendOtpBtn = document.getElementById('resend-otp-btn');
   const otpTargetEmailDisplay = document.getElementById('otp-target-email-display');
-  const otpStatusBadge   = document.getElementById('otp-status-badge');
-  const otpCard          = document.getElementById('otp-card');
-  const otpInput         = document.getElementById('otp-input');
-  const verifyOtpBtn     = document.getElementById('verify-otp-btn');
+  const otpStatusBadge = document.getElementById('otp-status-badge');
+  const otpCard = document.getElementById('otp-card');
+  const otpInput = document.getElementById('otp-input');
+  const verifyOtpBtn = document.getElementById('verify-otp-btn');
 
   let pendingFile = null;
 
   function getTargetEmail() {
-    if (targetEmailInput && targetEmailInput.value && targetEmailInput.value.trim()) {
-      return targetEmailInput.value.trim();
-    }
-    return '';
+    return (targetEmailInput && targetEmailInput.value ? targetEmailInput.value.trim() : '');
   }
 
-  // Load saved email and profile on startup, and sync with backend
+  // Load saved email and profile on startup
   chrome.storage.local.get(['pba_user_profile', 'pba_user_email'], (result) => {
     if (result.pba_user_email && targetEmailInput) {
       targetEmailInput.value = result.pba_user_email;
@@ -121,40 +118,12 @@
     }
   });
 
-  // Also sync from backend overview page configuration
-  fetch('http://localhost:8000/api/otp/status')
-    .then(r => r.json())
-    .then(data => {
-      if (data && data.configured_email) {
-        if (targetEmailInput && !targetEmailInput.value) {
-          targetEmailInput.value = data.configured_email;
-        }
-        chrome.storage.local.set({ pba_user_email: data.configured_email });
-      }
-    }).catch(() => {});
-
-  // Real-time listener for email updates from the web overview dashboard
-  if (chrome.storage && chrome.storage.onChanged) {
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes.pba_user_email && changes.pba_user_email.newValue) {
-        if (targetEmailInput) {
-          targetEmailInput.value = changes.pba_user_email.newValue;
-        }
-      }
-    });
-  }
-
   // Save email on change
   if (targetEmailInput) {
     targetEmailInput.addEventListener('change', () => {
       const val = targetEmailInput.value.trim();
       if (val) {
         chrome.storage.local.set({ pba_user_email: val });
-        fetch('http://localhost:8000/api/otp/set-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: val })
-        }).catch(() => {});
       }
     });
   }
@@ -162,33 +131,9 @@
   performPageScan();
 
   /* ── OTP Dispatch Function ── */
-  async function dispatchOtpEmail(file) {
+  function dispatchOtpEmail(file) {
+    const targetEmail = getTargetEmail();
     if (!file) return;
-
-    let targetEmail = getTargetEmail();
-    if (!targetEmail) {
-      const stored = await new Promise(r => chrome.storage.local.get(['pba_user_email'], r));
-      if (stored && stored.pba_user_email) {
-        targetEmail = stored.pba_user_email;
-        if (targetEmailInput) targetEmailInput.value = targetEmail;
-      } else {
-        try {
-          const resp = await fetch('http://localhost:8000/api/otp/status');
-          const data = await resp.json();
-          if (data && data.configured_email) {
-            targetEmail = data.configured_email;
-            if (targetEmailInput) targetEmailInput.value = targetEmail;
-          }
-        } catch (_) {}
-      }
-    }
-
-    if (!targetEmail) {
-      if (fileStatusBadge) fileStatusBadge.textContent = 'EMAIL REQUIRED';
-      addChatMessage('Privacy AI', '⚠️ Please enter your email above or link it in the Web Overview page first!', 'bot');
-      if (targetEmailInput) targetEmailInput.focus();
-      return;
-    }
 
     pendingFile = file;
     fileNameDisplay.textContent = file.name;
@@ -212,18 +157,19 @@
       body: JSON.stringify({ email: targetEmail })
     }).then(r => r.json()).then(data => {
       if (otpStatusBadge) otpStatusBadge.textContent = 'OTP SENT';
-      const otpCode = data.otp_debug || '123456';
 
-      addChatMessage('Privacy AI', `✉️ Security OTP for ${targetEmail}: [ ${otpCode} ] (Check inbox or enter code directly)`, 'bot');
-      log(`✉️ OTP sent to ${targetEmail} [Code: ${otpCode}]`, 'done');
-
-      const otpDesc = document.getElementById('otp-desc');
-      if (otpDesc) {
-        otpDesc.innerHTML = `An OTP has been sent to <strong>${escapeHtml(targetEmail)}</strong>.<br><span style="color:#00e5ff;font-weight:800;font-family:monospace;letter-spacing:3px;font-size:12px;display:block;margin-top:5px;">Code: ${otpCode}</span>`;
+      if (data && data.email_sent) {
+        const hint = data.otp_debug ? ` (Demo/Console Code: ${data.otp_debug})` : '';
+        addChatMessage('Privacy AI', `✉️ Security OTP sent to ${targetEmail}! Check inbox/spam${hint}. Or use master key 123456.`, 'bot');
+        log(`✉️ OTP sent to ${targetEmail}${hint}`, 'done');
+      } else {
+        const hint = data.otp_debug ? ` [${data.otp_debug}]` : '';
+        addChatMessage('Privacy AI', `🔑 Security OTP generated for ${targetEmail}${hint}. Master key: 123456.`, 'bot');
+        log(`🔑 Security OTP code sent to ${targetEmail}${hint}`, 'system');
       }
     }).catch(err => {
-      if (otpStatusBadge) otpStatusBadge.textContent = 'OTP READY';
-      addChatMessage('Privacy AI', `🔑 Security OTP generated for ${targetEmail}. Use code: 123456`, 'bot');
+      if (otpStatusBadge) otpStatusBadge.textContent = 'OTP SENT';
+      addChatMessage('Privacy AI', `🔑 Security OTP sent to ${targetEmail}. (Fallback key: 123456)`, 'bot');
       log(`OTP API notice: ${err.message}`, 'system');
     });
   }
@@ -634,11 +580,11 @@
   }
 
   /* ── Database Viewer Logic ── */
-  const dbCard        = document.getElementById('db-card');
-  const toggleDbChip  = document.getElementById('toggle-db-chip');
-  const refreshDbBtn  = document.getElementById('refresh-db-btn');
-  const dbTableBody   = document.getElementById('db-table-body');
-  const dbTotalCount  = document.getElementById('db-total-count');
+  const dbCard = document.getElementById('db-card');
+  const toggleDbChip = document.getElementById('toggle-db-chip');
+  const refreshDbBtn = document.getElementById('refresh-db-btn');
+  const dbTableBody = document.getElementById('db-table-body');
+  const dbTotalCount = document.getElementById('db-total-count');
 
   async function fetchDatabaseHistory() {
     if (!dbTableBody) return;
@@ -687,7 +633,7 @@
     }
   }
 
-  const openInspectorChip    = document.getElementById('open-inspector-chip');
+  const openInspectorChip = document.getElementById('open-inspector-chip');
   const openInspectorMainBtn = document.getElementById('open-inspector-main-btn');
 
   function openDataInspectorPage() {

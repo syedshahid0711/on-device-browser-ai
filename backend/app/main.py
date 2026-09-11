@@ -5,7 +5,7 @@ FastAPI application entry point.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import health, analyze, task, extract, otp
+from app.routes import health, analyze, task, extract, otp, inspector
 from app.utils.logger import get_logger
 import os
 
@@ -38,6 +38,7 @@ app.include_router(analyze.router, prefix="/api", tags=["Agent"])
 app.include_router(task.router,    prefix="/api", tags=["Tasks"])
 app.include_router(otp.router)
 app.include_router(extract.router)
+app.include_router(inspector.router)
 
 
 from fastapi.staticfiles import StaticFiles

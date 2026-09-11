@@ -343,15 +343,8 @@ export default function App() {
   const [copiedRef, setCopiedRef] = useState(false);
   const [missingFields, setMissingFields] = useState([]);
   const [showMissingPopup, setShowMissingPopup] = useState(false);
+  const [wordFileLoaded, setWordFileLoaded] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-
-  // Security Email & Live OTP for Extension
-  const [securityEmail, setSecurityEmail] = useState("");
-  const [emailSaved, setEmailSaved] = useState(false);
-  const [activeOtp, setActiveOtp] = useState("");
-  const [otpTimestamp, setOtpTimestamp] = useState("");
-  const [otpTargetDisplay, setOtpTargetDisplay] = useState("");
-  const [copiedOtp, setCopiedOtp] = useState(false);
 
   // Profile keys → form field names
   const PROFILE_TO_FORM = {
@@ -386,14 +379,114 @@ export default function App() {
     "confirm_password",
   ];
 
-  /* Load inspector profile from Chrome storage */
-  const loadInspectorData = () => {
+  // Converts active form fields into inspector profile data and live field mapping details
+  const getFormDataInspectorItems = (formData) => {
+    const profile = {};
+    const fillDetails = [];
+
+    const fieldDefs = [
+      { formKey: "full_name", key: "name", label: "Full Name", selector: "#full_name", tag: "input" },
+      { formKey: "employee_id", key: "employee_id", label: "Employee ID", selector: "#employee_id", tag: "input" },
+      { formKey: "dob", key: "dob", label: "Date of Birth", selector: "#dob", tag: "input" },
+      { formKey: "gender", key: "gender", label: "Gender", selector: "#gender", tag: "select" },
+      { formKey: "email", key: "email", label: "Email Address", selector: "#email", tag: "input" },
+      { formKey: "phone", key: "phone", label: "Phone Number", selector: "#phone", tag: "input" },
+      { formKey: "address", key: "address", label: "Address", selector: "#address", tag: "textarea" },
+      { formKey: "division", key: "division", label: "Division / Center", selector: "#division", tag: "select" },
+      { formKey: "clearance_level", key: "clearance", label: "Clearance Level", selector: "#clearance_level", tag: "select" },
+      { formKey: "password", key: "password", label: "Password", selector: "#password", tag: "input" },
+    ];
+
+    fieldDefs.forEach((item) => {
+      const val = formData[item.formKey];
+      if (val && String(val).trim()) {
+        const cleanVal = String(val).trim();
+        profile[item.key] = cleanVal;
+        fillDetails.push({
+          key: item.key,
+          label: item.label,
+          value: cleanVal,
+          selector: item.selector,
+          elementTag: item.tag,
+          status: "FILLED ✓",
+          time: new Date().toLocaleTimeString(),
+        });
+      }
+    });
+
+    return { profile, fillDetails };
+  };
+
+  /* Load inspector profile and form fill data from Chrome storage, localStorage, backend API, and live form state */
+  const loadInspectorData = async () => {
+    let prof = {};
+    let fills = [];
+
+    // 1. Check Chrome storage if available
     if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
-      window.chrome.storage.local.get(["pba_user_profile", "pba_fill_details"], (res) => {
-        setInspectorProfile(res.pba_user_profile || {});
-        setInspectorFillDetails(res.pba_fill_details || []);
+      await new Promise((resolve) => {
+        window.chrome.storage.local.get(["pba_user_profile", "pba_fill_details"], (res) => {
+          if (res) {
+            prof = res.pba_user_profile || {};
+            fills = res.pba_fill_details || [];
+          }
+          resolve();
+        });
       });
     }
+
+    // 2. Check localStorage fallback
+    if (typeof window !== "undefined" && Object.keys(prof).length === 0) {
+      try {
+        const localProf = localStorage.getItem("pba_user_profile");
+        if (localProf) prof = JSON.parse(localProf);
+        const localFill = localStorage.getItem("pba_fill_details");
+        if (localFill) fills = JSON.parse(localFill);
+      } catch (_) {}
+    }
+
+    // 3. Check backend API sync
+    if (Object.keys(prof).length === 0 || fills.length === 0) {
+      try {
+        const resp = await fetch("http://localhost:8000/api/inspector/data");
+        const data = await resp.json();
+        if (data && data.success) {
+          if (Object.keys(prof).length === 0 && data.profile && Object.keys(data.profile).length > 0) {
+            prof = data.profile;
+          }
+          if (fills.length === 0 && data.fill_details && data.fill_details.length > 0) {
+            fills = data.fill_details;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 4. Incorporate filled form data directly from current form state
+    const fromForm = getFormDataInspectorItems(isroFormData);
+    if (Object.keys(fromForm.profile).length > 0) {
+      prof = { ...prof, ...fromForm.profile };
+      if (fills.length === 0) {
+        fills = fromForm.fillDetails;
+      }
+    }
+
+    // 5. Generate fills if profile exists but fills is empty
+    if (Object.keys(prof).length > 0 && fills.length === 0) {
+      Object.entries(prof).forEach(([k, v]) => {
+        fills.push({
+          key: k,
+          label: INSPECTOR_LABELS[k] || k,
+          value: v,
+          selector: INSPECTOR_SELECTOR_MAP[k] || `[name="${k}"]`,
+          elementTag: "input",
+          status: "TRANSFERRED ✓",
+          time: new Date().toLocaleTimeString(),
+        });
+      });
+    }
+
+    setInspectorProfile(prof);
+    setInspectorFillDetails(fills);
   };
 
   /* Load Word file profile from Chrome storage and auto-populate form */
@@ -478,34 +571,39 @@ export default function App() {
     setWordFileLoaded(false);
     setInspectorProfile({});
     setInspectorFillDetails([]);
-    if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
-      window.chrome.storage.local.remove(["pba_user_profile", "pba_fill_details"]);
-    }
-  };
-
-  const handleSaveSecurityEmail = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const clean = securityEmail.trim();
-    if (!clean) return;
-
     if (typeof window !== "undefined") {
-      localStorage.setItem("pba_user_email", clean);
+      localStorage.removeItem("pba_user_profile");
+      localStorage.removeItem("pba_fill_details");
       if (window.chrome && window.chrome.storage) {
-        window.chrome.storage.local.set({ pba_user_email: clean });
+        window.chrome.storage.local.remove(["pba_user_profile", "pba_fill_details"]);
       }
     }
+    fetch("http://localhost:8000/api/inspector/clear", { method: "POST" }).catch(() => {});
+  };
 
-    try {
-      await fetch("http://localhost:8000/api/otp/set-email", {
+  // Real-time synchronization: when form fields are filled, immediately sync to inspector
+  useEffect(() => {
+    const fromForm = getFormDataInspectorItems(isroFormData);
+    if (Object.keys(fromForm.profile).length > 0) {
+      setInspectorProfile((prev) => ({ ...prev, ...fromForm.profile }));
+      setInspectorFillDetails((prev) => (prev.length > 0 ? prev : fromForm.fillDetails));
+      try {
+        localStorage.setItem("pba_user_profile", JSON.stringify(fromForm.profile));
+        localStorage.setItem("pba_fill_details", JSON.stringify(fromForm.fillDetails));
+        if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
+          window.chrome.storage.local.set({
+            pba_user_profile: fromForm.profile,
+            pba_fill_details: fromForm.fillDetails,
+          });
+        }
+      } catch (_) {}
+      fetch("http://localhost:8000/api/inspector/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: clean }),
-      });
-    } catch (_) {}
-
-    setEmailSaved(true);
-    setTimeout(() => setEmailSaved(false), 3000);
-  };
+        body: JSON.stringify({ profile: fromForm.profile, fill_details: fromForm.fillDetails }),
+      }).catch(() => {});
+    }
+  }, [isroFormData]);
 
   useEffect(() => {
     // Wipe any query parameters from URL bar immediately
@@ -515,59 +613,40 @@ export default function App() {
     loadInspectorData();
     loadAndApplyWordProfile();
 
-    // Fetch initial security email from chrome.storage or localStorage
-    if (typeof window !== "undefined") {
-      const localEmail = localStorage.getItem("pba_user_email") || "";
-      if (localEmail) setSecurityEmail(localEmail);
-      if (window.chrome && window.chrome.storage) {
-        window.chrome.storage.local.get(["pba_user_email"], (res) => {
-          if (res.pba_user_email) setSecurityEmail(res.pba_user_email);
-        });
+    const handleFillEvent = (e) => {
+      if (e && e.detail) {
+        if (e.detail.profile) setInspectorProfile((prev) => ({ ...prev, ...e.detail.profile }));
+        if (e.detail.fillDetails) setInspectorFillDetails(e.detail.fillDetails);
       }
-    }
-
-    // Sync with backend OTP status
-    const fetchOtpStatus = () => {
-      fetch("http://localhost:8000/api/otp/status")
-        .then((r) => r.json())
-        .then((data) => {
-          if (data && data.success) {
-            if (data.configured_email) {
-              setSecurityEmail((prev) => prev || data.configured_email);
-            }
-            if (data.latest_otp) {
-              setActiveOtp(data.latest_otp);
-              setOtpTimestamp(data.timestamp);
-              setOtpTargetDisplay(data.latest_email);
-            }
-          }
-        })
-        .catch(() => {});
     };
-
-    fetchOtpStatus();
-    const otpInterval = setInterval(fetchOtpStatus, 2500);
+    const handleWindowMsg = (e) => {
+      if (e && e.data && e.data.type === "PBA_DATA_INSPECTOR_UPDATE") {
+        if (e.data.profile) setInspectorProfile((prev) => ({ ...prev, ...e.data.profile }));
+        if (e.data.fillDetails) setInspectorFillDetails(e.data.fillDetails);
+      }
+    };
+    window.addEventListener("pba_fill_completed", handleFillEvent);
+    window.addEventListener("message", handleWindowMsg);
 
     if (typeof window !== "undefined" && window.chrome && window.chrome.storage && window.chrome.storage.onChanged) {
       const handleStorageChange = (changes, area) => {
-        if (area === "local") {
-          if (changes.pba_user_profile || changes.pba_fill_details) {
-            loadInspectorData();
-            loadAndApplyWordProfile();
-          }
-          if (changes.pba_user_email && changes.pba_user_email.newValue) {
-            setSecurityEmail(changes.pba_user_email.newValue);
-          }
+        if (area === "local" && (changes.pba_user_profile || changes.pba_fill_details)) {
+          loadInspectorData();
+          loadAndApplyWordProfile();
         }
       };
       window.chrome.storage.onChanged.addListener(handleStorageChange);
       return () => {
-        clearInterval(otpInterval);
+        window.removeEventListener("pba_fill_completed", handleFillEvent);
+        window.removeEventListener("message", handleWindowMsg);
         window.chrome.storage.onChanged.removeListener(handleStorageChange);
       };
     }
 
-    return () => clearInterval(otpInterval);
+    return () => {
+      window.removeEventListener("pba_fill_completed", handleFillEvent);
+      window.removeEventListener("message", handleWindowMsg);
+    };
   }, []);
 
   const openInspector = () => {
@@ -806,7 +885,9 @@ export default function App() {
                   <div className="inspector-stat-card">
                     <span className="inspector-stat-label">EXTRACTED FIELDS</span>
                     <div className="inspector-stat-val">{Object.keys(inspectorProfile).length}</div>
-                    <span className="inspector-stat-sub">Source: Word .docx document</span>
+                    <span className="inspector-stat-sub">
+                      Source: {wordFileLoaded ? "Word .docx document" : Object.keys(inspectorProfile).length > 0 ? "Form Field Inputs" : "Waiting for Form / Doc"}
+                    </span>
                   </div>
                   <div className="inspector-stat-card">
                     <span className="inspector-stat-label">PII SENSITIVE</span>
@@ -832,13 +913,15 @@ export default function App() {
                 {/* Extracted Fields Grid */}
                 <div className="inspector-section">
                   <div className="inspector-section-head">
-                    <h3>📄 Extracted Word Profile Data</h3>
-                    <span className="inspector-badge cyan">ON-DEVICE PARSED</span>
+                    <h3>📄 Extracted Profile &amp; Form Data</h3>
+                    <span className="inspector-badge cyan">
+                      {wordFileLoaded ? "WORD PARSED" : Object.keys(inspectorProfile).length > 0 ? "FORM SYNCED" : "ON-DEVICE"}
+                    </span>
                   </div>
                   {Object.keys(inspectorProfile).length === 0 ? (
                     <div className="inspector-empty">
                       <div className="inspector-empty-icon">📂</div>
-                      <p>No profile data loaded. Upload a Word document (.docx) in the extension popup first.</p>
+                      <p>No form data detected yet. Fill in the form or attach a Word document (.docx) to inspect fields here.</p>
                     </div>
                   ) : (
                     <div className="inspector-fields-grid">
@@ -857,7 +940,7 @@ export default function App() {
                               <span className={`inspector-pii-badge ${isSensitive ? "sensitive" : "standard"}`}>
                                 {isSensitive ? "PROTECTED" : "STANDARD"}
                               </span>
-                              <span>Word Doc Extracted</span>
+                              <span>{wordFileLoaded ? "Word Doc Extracted" : "Form Input Filled"}</span>
                             </div>
                           </div>
                         );
@@ -933,15 +1016,15 @@ export default function App() {
                       {Object.keys(inspectorProfile).length === 0
                         ? "// No profile data in memory"
                         : JSON.stringify(
-                            Object.fromEntries(
-                              Object.entries(inspectorProfile).map(([k, v]) => [
-                                k,
-                                INSPECTOR_SENSITIVE.has(k) ? "•••••••• [PROTECTED_DATA]" : v,
-                              ])
-                            ),
-                            null,
-                            2
-                          )}
+                          Object.fromEntries(
+                            Object.entries(inspectorProfile).map(([k, v]) => [
+                              k,
+                              INSPECTOR_SENSITIVE.has(k) ? "•••••••• [PROTECTED_DATA]" : v,
+                            ])
+                          ),
+                          null,
+                          2
+                        )}
                     </pre>
                   </div>
                 </div>
@@ -1189,45 +1272,6 @@ export default function App() {
                     <br />
                     <span>Your control.</span>
                   </h1>
-
-                  {/* OVERVIEW SECURITY EMAIL QUICK LINK */}
-                  <div className="overview-email-card">
-                    <div className="overview-email-top">
-                      <span className="overview-email-icon">✉️</span>
-                      <div>
-                        <strong>Extension Security OTP Email</strong>
-                        <p>OTPs for Word document attachments are sent to this address</p>
-                      </div>
-                    </div>
-                    <form onSubmit={handleSaveSecurityEmail} className="overview-email-form">
-                      <input
-                        type="email"
-                        placeholder="Enter email e.g. user@gmail.com"
-                        value={securityEmail}
-                        onChange={(e) => setSecurityEmail(e.target.value)}
-                        className="overview-email-input"
-                        required
-                      />
-                      <button type="submit" className="overview-email-btn">
-                        {emailSaved ? "✓ Linked!" : "Set Security Email"}
-                      </button>
-                    </form>
-                    {activeOtp && (
-                      <div className="overview-otp-alert">
-                        <span>⚡ Active Verification Code: <strong>{activeOtp}</strong></span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard?.writeText(activeOtp);
-                            setCopiedOtp(true);
-                            setTimeout(() => setCopiedOtp(false), 2000);
-                          }}
-                        >
-                          {copiedOtp ? "✓ Copied" : "📋 Copy OTP"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 <div className="processing">
@@ -1290,66 +1334,6 @@ export default function App() {
 
               <div className="score-bar">
                 <div></div>
-              </div>
-            </div>
-
-            {/* SECURITY OTP CONFIGURATION & LIVE CODE STATION */}
-            <div className="otp-security-box">
-              <div className="otp-security-header">
-                <span className="otp-security-tag">🔐 EXTENSION OTP AUTH</span>
-                <span className={`otp-status-chip ${securityEmail ? "active" : ""}`}>
-                  {emailSaved ? "SAVED ✓" : securityEmail ? "LINKED" : "UNLINKED"}
-                </span>
-              </div>
-              <p className="otp-security-desc">
-                Authorized email used by the browser extension to send real one-time passwords for Word files.
-              </p>
-
-              <form onSubmit={handleSaveSecurityEmail} className="otp-security-form">
-                <input
-                  type="email"
-                  className="cyber-input otp-email-input"
-                  placeholder="Enter email e.g. user@gmail.com"
-                  value={securityEmail}
-                  onChange={(e) => setSecurityEmail(e.target.value)}
-                  required
-                />
-                <button type="submit" className="cyber-btn-primary otp-save-btn">
-                  {emailSaved ? "✓ Saved!" : "Link Email ➔"}
-                </button>
-              </form>
-
-              {/* LIVE OTP MONITOR */}
-              <div className="live-otp-monitor">
-                <div className="live-otp-header">
-                  <span className="live-otp-title">⚡ ACTIVE ONE-TIME PASSWORD</span>
-                  <span className="live-otp-time">{otpTimestamp || "Live"}</span>
-                </div>
-                {activeOtp ? (
-                  <div className="live-otp-active-row">
-                    <span className="live-otp-digits">{activeOtp}</span>
-                    <button
-                      type="button"
-                      className="live-otp-copy-btn"
-                      onClick={() => {
-                        navigator.clipboard?.writeText(activeOtp);
-                        setCopiedOtp(true);
-                        setTimeout(() => setCopiedOtp(false), 2000);
-                      }}
-                    >
-                      {copiedOtp ? "✓ Copied" : "📋 Copy Code"}
-                    </button>
-                  </div>
-                ) : (
-                  <p className="live-otp-waiting">
-                    Attach a .docx file in the extension to dispatch an instant 6-digit OTP code to your inbox.
-                  </p>
-                )}
-                {otpTargetDisplay && (
-                  <div className="live-otp-footer">
-                    Sent to: <strong>{otpTargetDisplay}</strong>
-                  </div>
-                )}
               </div>
             </div>
           </aside>
@@ -1437,7 +1421,7 @@ export default function App() {
 
       {/* Thank You for Submitting Application Modal */}
       {showThankYouModal && (
-        <div 
+        <div
           className="pba-thankyou-overlay"
           style={{
             position: "fixed",
@@ -1453,7 +1437,7 @@ export default function App() {
           }}
           onClick={() => setShowThankYouModal(false)}
         >
-          <div 
+          <div
             className="pba-thankyou-card"
             style={{
               background: "linear-gradient(145deg, rgba(8, 22, 34, 0.98) 0%, rgba(2, 12, 20, 0.99) 100%)",

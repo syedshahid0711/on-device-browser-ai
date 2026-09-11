@@ -501,9 +501,20 @@
       }
     }
 
-    // Save fill details for Data Inspector
+    // Save fill details for Data Inspector across chrome.storage, localStorage, and backend
     if (fillDetails.length > 0) {
-      chrome.storage.local.set({ pba_fill_details: fillDetails });
+      chrome.storage.local.set({ pba_fill_details: fillDetails, pba_user_profile: profile });
+      try {
+        localStorage.setItem('pba_fill_details', JSON.stringify(fillDetails));
+        if (profile) localStorage.setItem('pba_user_profile', JSON.stringify(profile));
+        window.dispatchEvent(new CustomEvent('pba_fill_completed', { detail: { profile, fillDetails } }));
+        window.postMessage({ type: 'PBA_DATA_INSPECTOR_UPDATE', profile, fillDetails }, '*');
+      } catch (_) {}
+      fetch('http://localhost:8000/api/inspector/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: profile || {}, fill_details: fillDetails })
+      }).catch(() => {});
     }
 
     // Only check Terms if targetKeys is null or explicitly includes terms

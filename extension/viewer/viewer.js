@@ -45,15 +45,67 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function loadProfileData() {
-    chrome.storage.local.get(['pba_user_profile', 'pba_fill_details'], (res) => {
-      currentProfile = res.pba_user_profile || {};
-      fillDetails    = res.pba_fill_details || [];
-      renderAll();
-    });
+  async function loadProfileData() {
+    let loadedProfile = {};
+    let loadedFill = [];
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      const res = await new Promise(r => chrome.storage.local.get(['pba_user_profile', 'pba_fill_details'], r));
+      if (res) {
+        loadedProfile = res.pba_user_profile || {};
+        loadedFill    = res.pba_fill_details || [];
+      }
+    }
+
+    // Check localStorage fallback
+    if (Object.keys(loadedProfile).length === 0) {
+      try {
+        const storedProf = localStorage.getItem('pba_user_profile');
+        if (storedProf) loadedProfile = JSON.parse(storedProf);
+        const storedFill = localStorage.getItem('pba_fill_details');
+        if (storedFill) loadedFill = JSON.parse(storedFill);
+      } catch (_) {}
+    }
+
+    // Check backend API sync fallback
+    if (Object.keys(loadedProfile).length === 0 || loadedFill.length === 0) {
+      try {
+        const resp = await fetch('http://localhost:8000/api/inspector/data');
+        const data = await resp.json();
+        if (data && data.success) {
+          if (Object.keys(loadedProfile).length === 0 && data.profile) {
+            loadedProfile = data.profile;
+          }
+          if (loadedFill.length === 0 && data.fill_details) {
+            loadedFill = data.fill_details;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // If profile is empty but fillDetails has items, reconstruct profile
+    if (Object.keys(loadedProfile).length === 0 && loadedFill && loadedFill.length > 0) {
+      loadedFill.forEach(item => {
+        if (item.key && item.value) {
+          loadedProfile[item.key] = item.value;
+        }
+      });
+    }
+
+    currentProfile = loadedProfile;
+    fillDetails    = loadedFill;
+    renderAll();
   }
 
   function renderAll() {
+    if (Object.keys(currentProfile).length === 0 && fillDetails && fillDetails.length > 0) {
+      fillDetails.forEach(item => {
+        if (item.key && item.value) {
+          currentProfile[item.key] = item.value;
+        }
+      });
+    }
+
     const keys = Object.keys(currentProfile);
     const count = keys.length;
 
